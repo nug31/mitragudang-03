@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { X, Package, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import { X, Package, TrendingUp, TrendingDown, Calendar, FileSpreadsheet } from "lucide-react";
 import Button from "../ui/Button";
+import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
 
 interface StockHistoryEntry {
@@ -107,6 +108,38 @@ const StockHistoryModal: React.FC<StockHistoryModalProps> = ({
             hour: "2-digit",
             minute: "2-digit",
         });
+    };
+
+    const handleExportExcel = () => {
+        if (history.length === 0) return;
+
+        // Prepare data for export
+        const exportData = history.map((entry) => ({
+            Tanggal: formatDate(entry.created_at),
+            Barang: entry.item_name || itemName || "-",
+            Kategori: entry.category || "-",
+            Keterangan: getChangeTypeLabel(entry.change_type),
+            Notes: entry.notes || "-",
+            Masuk: entry.quantity_change > 0 ? entry.quantity_change : 0,
+            Keluar: entry.quantity_change < 0 ? Math.abs(entry.quantity_change) : 0,
+            Saldo: entry.quantity_after,
+            "Oleh User": entry.created_by || "-"
+        }));
+
+        // Create worksheet
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Stock History");
+
+        // Generate filename
+        const filename = isSingleItem
+            ? `Stock_History_${itemName?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+            : `Global_Stock_History_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        // Save file
+        XLSX.writeFile(workbook, filename);
     };
 
     const getChangeTypeLabel = (type: string) => {
@@ -254,8 +287,15 @@ const StockHistoryModal: React.FC<StockHistoryModalProps> = ({
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t bg-gray-50 flex justify-end">
+                <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
+                    <Button
+                        variant="secondary"
+                        onClick={handleExportExcel}
+                        icon={<FileSpreadsheet className="h-4 w-4" />}
+                        disabled={history.length === 0}
+                    >
+                        Export Excel
+                    </Button>
                     <Button variant="outline" onClick={onClose}>
                         Tutup
                     </Button>

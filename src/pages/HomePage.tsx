@@ -15,8 +15,7 @@ import UserRecentActivity from "../components/dashboard/UserRecentActivity";
 import { Card, CardHeader, CardContent } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Logo from "../components/ui/Logo";
-import { PlusCircle, ArrowRight, AlertCircle, TrendingUp, Activity, Package, ClipboardList, Users, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import StockAdjustmentModal from "../components/inventory/StockAdjustmentModal";
+import { PlusCircle, ArrowRight, AlertCircle, TrendingUp, Activity, Package, ClipboardList, Users } from "lucide-react";
 
 const HomePage: React.FC = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -25,7 +24,6 @@ const HomePage: React.FC = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStatsType | null>(null);
   const [userDashboardStats, setUserDashboardStats] = useState<UserDashboardStatsType | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [stockModal, setStockModal] = useState<{ isOpen: boolean, type: "masuk" | "keluar" }>({ isOpen: false, type: "masuk" });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -226,41 +224,6 @@ const HomePage: React.FC = () => {
               </Card>
             )}
           </div>
-
-          {/* Stock Entry Quick Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <button
-              onClick={() => setStockModal({ isOpen: true, type: "masuk" })}
-              className="flex items-center justify-between p-6 bg-white rounded-2xl shadow-3d hover:shadow-3d-hover hover:-translate-y-1 transition-all duration-300 border border-green-100 group"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
-                  <ArrowUpCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-4 text-left">
-                  <h3 className="text-lg font-bold text-gray-900">Barang Masuk</h3>
-                  <p className="text-sm text-gray-500">Input stok baru masuk</p>
-                </div>
-              </div>
-              <PlusCircle className="h-6 w-6 text-green-400 group-hover:text-green-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={() => setStockModal({ isOpen: true, type: "keluar" })}
-              className="flex items-center justify-between p-6 bg-white rounded-2xl shadow-3d hover:shadow-3d-hover hover:-translate-y-1 transition-all duration-300 border border-red-100 group"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-xl group-hover:bg-red-200 transition-colors">
-                  <ArrowDownCircle className="h-8 w-8 text-red-600" />
-                </div>
-                <div className="ml-4 text-left">
-                  <h3 className="text-lg font-bold text-gray-900">Barang Keluar</h3>
-                  <p className="text-sm text-gray-500">Input stok keluar manual</p>
-                </div>
-              </div>
-              <PlusCircle className="h-6 w-6 text-red-400 group-hover:text-red-600 transition-colors" />
-            </button>
-          </div>
         </>
       )}
 
@@ -307,7 +270,8 @@ const HomePage: React.FC = () => {
             </Card>
           </div>
         </>
-      )}
+      )
+      }
 
       <div className="mb-6 flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-900 flex items-center">
@@ -329,40 +293,21 @@ const HomePage: React.FC = () => {
         isLoading={loading}
       />
 
-      {!isAdmin && requests.length > 0 && (
-        <div className="mt-6 text-right">
-          <Button
-            variant="outline"
-            href="/requests"
-            icon={<ArrowRight className="h-4 w-4 ml-1" />}
-            className="inline-flex items-center"
-          >
-            View All Requests
-          </Button>
-        </div>
-      )}
-      {stockModal.isOpen && user && (
-        <StockAdjustmentModal
-          type={stockModal.type}
-          user={user}
-          onClose={() => setStockModal({ ...stockModal, isOpen: false })}
-          onSuccess={() => {
-            // Refresh dashboard data after update
-            const fetchDashboardStats = async () => {
-              if (isAdmin) {
-                try {
-                  const stats = await dashboardService.getDashboardStats();
-                  setDashboardStats(stats);
-                } catch (error) {
-                  console.error("Error fetching dashboard stats:", error);
-                }
-              }
-            };
-            fetchDashboardStats();
-          }}
-        />
-      )}
-    </MainLayout>
+      {
+        !isAdmin && requests.length > 0 && (
+          <div className="mt-6 text-right">
+            <Button
+              variant="outline"
+              href="/requests"
+              icon={<ArrowRight className="h-4 w-4 ml-1" />}
+              className="inline-flex items-center"
+            >
+              View All Requests
+            </Button>
+          </div>
+        )
+      }
+    </MainLayout >
   );
 };
 

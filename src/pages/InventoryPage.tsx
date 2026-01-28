@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Item } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 import MainLayout from "../components/layout/MainLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -13,6 +14,8 @@ import {
   ListFilter,
   Search,
   History,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import InventoryList from "../components/inventory/InventoryList";
 import AddItemModal from "../components/inventory/AddItemModal";
@@ -21,6 +24,7 @@ import ImportItemsModal from "../components/inventory/ImportItemsModal";
 import CategoryManagement from "../components/inventory/CategoryManagement";
 import BrowseItemsModal from "../components/inventory/BrowseItemsModal";
 import StockHistoryModal from "../components/inventory/StockHistoryModal";
+import StockAdjustmentModal from "../components/inventory/StockAdjustmentModal";
 import StockSummaryCard from "../components/inventory/StockSummaryCard";
 import Select from "../components/ui/Select";
 import Input from "../components/ui/Input";
@@ -30,6 +34,7 @@ import { normalizeCategory, categoriesAreEqual } from "../utils/categoryUtils";
 import { API_BASE_URL } from "../config";
 
 const InventoryPage: React.FC = () => {
+  const { user } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +48,10 @@ const InventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<Item | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stockModal, setStockModal] = useState<{ isOpen: boolean; type: "masuk" | "keluar" }>({
+    isOpen: false,
+    type: "masuk",
+  });
   const [categoryOptions, setCategoryOptions] = useState([
     { value: "all", label: "All Categories" },
     { value: "electronics", label: "Electronics" },
@@ -272,8 +281,25 @@ const InventoryPage: React.FC = () => {
               className="flex-shrink-0"
               size="sm"
             >
-              <span className="hidden sm:inline">History</span>
-              <span className="sm:hidden">History</span>
+              History
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setStockModal({ isOpen: true, type: "masuk" })}
+              icon={<ArrowUpCircle className="h-4 w-4 text-green-600" />}
+              className="flex-shrink-0 border-green-200 text-green-700 hover:bg-green-50"
+              size="sm"
+            >
+              Barang Masuk
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setStockModal({ isOpen: true, type: "keluar" })}
+              icon={<ArrowDownCircle className="h-4 w-4 text-red-600" />}
+              className="flex-shrink-0 border-red-200 text-red-700 hover:bg-red-50"
+              size="sm"
+            >
+              Barang Keluar
             </Button>
             <Button
               variant="secondary"
@@ -437,13 +463,15 @@ const InventoryPage: React.FC = () => {
       )}
 
       {showBrowseModal && (
-        <BrowseItemsModal
-          items={items}
-          onClose={() => setShowBrowseModal(false)}
-          onSelectItem={(item) => {
-            setEditingItem(item);
-            setShowBrowseModal(false);
-          }}
+        />
+      )}
+
+      {stockModal.isOpen && user && (
+        <StockAdjustmentModal
+          type={stockModal.type}
+          user={user}
+          onClose={() => setStockModal({ ...stockModal, isOpen: false })}
+          onSuccess={fetchItems}
         />
       )}
     </MainLayout>
