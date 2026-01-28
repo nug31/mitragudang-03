@@ -463,6 +463,13 @@ const InventoryPage: React.FC = () => {
       )}
 
       {showBrowseModal && (
+        <BrowseItemsModal
+          items={items}
+          onClose={() => setShowBrowseModal(false)}
+          onSelectItem={(item) => {
+            setEditingItem(item);
+            setShowBrowseModal(false);
+          }}
         />
       )}
 
