@@ -259,7 +259,28 @@ app.get("/api/categories", async (req, res) => {
                     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             `);
-            // Attempt to add unique constraint if missing (handles cases where table was created without it)
+
+            // Migration: Add createdAt if missing
+            await db.query(`
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='createdAt') THEN 
+                        ALTER TABLE categories ADD COLUMN "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP; 
+                    END IF; 
+                END $$;
+            `);
+
+            // Migration: Add updatedAt if missing
+            await db.query(`
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='updatedAt') THEN 
+                        ALTER TABLE categories ADD COLUMN "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP; 
+                    END IF; 
+                END $$;
+            `);
+
+            // Migration: Add UNIQUE constraint if missing
             await db.query(`
                 DO $$ 
                 BEGIN 
