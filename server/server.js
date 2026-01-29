@@ -245,14 +245,13 @@ app.get("/api/setup-categories", async (req, res) => {
     }
 });
 
-// Categories API - with robust auto-sync
+// Categories API - with robust auto-sync and on-the-fly migration (Netlify compatible)
 app.get("/api/categories", async (req, res) => {
     try {
-        // 1. Fetch existing categories
+        // 1. Try to fetch existing categories
         let result = await db.query("SELECT * FROM categories ORDER BY name");
 
-        // 2. Sync with items table (Self-Healing) to ensure we never have empty categories if items exist
-        // Fetch distinct categories from items that are NOT in categories table
+        // 2. Sync with items table (Self-Healing)
         const missingResult = await db.query(`
             SELECT DISTINCT i.category 
             FROM items i 
@@ -264,8 +263,6 @@ app.get("/api/categories", async (req, res) => {
 
         if (missingResult.rows.length > 0) {
             console.log(`Found ${missingResult.rows.length} missing categories. Syncing...`);
-
-            // Insert missing categories
             for (const row of missingResult.rows) {
                 await db.query(`
                     INSERT INTO categories (name, description) 
@@ -273,31 +270,57 @@ app.get("/api/categories", async (req, res) => {
                     ON CONFLICT (name) DO NOTHING
                 `, [row.category, `${row.category} items`]);
             }
-
-            // Re-fetch to get complete list and correct IDs
             result = await db.query("SELECT * FROM categories ORDER BY name");
         }
 
         res.json({ success: true, categories: result.rows });
     } catch (error) {
-        // Fallback for undefined_table (if migration failed significantly)
+        // Fallback for undefined_table (42P01) - common on first run in serverless
         if (error.code === '42P01') {
+            console.log("Categories table missing. Attempting on-the-fly migration...");
             try {
-                // Return derived objects from items
-                const result = await db.query("SELECT DISTINCT category FROM items WHERE category IS NOT NULL ORDER BY category");
-                res.json({
-                    success: true,
-                    categories: result.rows.map((r, i) => ({
-                        id: (i + 1).toString(),
-                        name: r.category,
-                        description: r.category + ' items'
-                    }))
-                });
-            } catch (err) {
-                res.status(500).json({ success: false, error: err.message });
+                // Table missing - CREATE IT NOW
+                await db.query(`
+                    CREATE TABLE IF NOT EXISTS categories (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) UNIQUE NOT NULL,
+                        description TEXT,
+                        "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
+
+                // Seed
+                await db.query(`
+                    INSERT INTO categories (name, description)
+                    SELECT DISTINCT category, category || ' items'
+                    FROM items
+                    WHERE category IS NOT NULL AND category != ''
+                    ON CONFLICT (name) DO NOTHING;
+                `);
+
+                // Re-fetch
+                const result = await db.query("SELECT * FROM categories ORDER BY name");
+                return res.json({ success: true, categories: result.rows });
+            } catch (setupErr) {
+                console.error("On-the-fly migration failed:", setupErr);
+                // Last resort: Return derived objects from items without table
+                try {
+                    const result = await db.query("SELECT DISTINCT category FROM items WHERE category IS NOT NULL ORDER BY category");
+                    return res.json({
+                        success: true,
+                        categories: result.rows.map((r, i) => ({
+                            id: (i + 1).toString(),
+                            name: r.category,
+                            description: r.category + ' items'
+                        }))
+                    });
+                } catch (lastErr) {
+                    return res.status(500).json({ success: false, error: lastErr.message });
+                }
             }
         } else {
-            console.error("Categories error:", error);
+            console.error("Categories API Error:", error);
             res.status(500).json({ success: false, error: error.message });
         }
     }
