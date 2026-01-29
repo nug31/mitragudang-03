@@ -132,8 +132,18 @@ const InventoryPage: React.FC = () => {
 
   const handleAddItem = async (newItem: Omit<Item, "id" | "status">) => {
     try {
-      const createdItem = await itemService.createItem(newItem);
-      if (createdItem) {
+      const response = await itemService.createItem(newItem);
+      if (response) {
+        // Normalize the item before adding to state (id to string, category normalization)
+        const createdItem: Item = {
+          ...response,
+          id: response.id?.toString() || "0",
+          category: normalizeCategory(response.category),
+          status: response.status || "in-stock",
+          quantity: response.quantity || 0,
+          minQuantity: response.minQuantity || 0
+        };
+
         setItems((prev) => [...prev, createdItem]);
         setShowAddModal(false);
       } else {

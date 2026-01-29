@@ -674,10 +674,10 @@ app.post("/api/items", async (req, res) => {
     try {
         const { name, description, category, quantity, minQuantity, price, unit } = req.body;
         const result = await db.query(
-            'INSERT INTO items (name, description, category, quantity, "minQuantity", price, unit, status, "isActive") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+            'INSERT INTO items (name, description, category, quantity, "minQuantity", price, unit, status, "isActive") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
             [name, description, category, quantity || 0, minQuantity || 0, price || 0, unit || 'pcs', 'in-stock', 1]
         );
-        res.status(201).json({ success: true, id: result.rows[0].id });
+        res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error("Create item error:", error);
         res.status(500).json({ success: false, error: error.message });
