@@ -23,7 +23,7 @@ import EditItemModal from "../components/inventory/EditItemModal";
 import ImportItemsModal from "../components/inventory/ImportItemsModal";
 import CategoryManagement from "../components/inventory/CategoryManagement";
 import BrowseItemsModal from "../components/inventory/BrowseItemsModal";
-import StockHistoryModal from "../components/inventory/StockHistoryModal";
+
 
 import Select from "../components/ui/Select";
 import Input from "../components/ui/Input";
@@ -46,7 +46,7 @@ const InventoryPage: React.FC = () => {
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<Item | null>(null);
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryOptions, setCategoryOptions] = useState([
     { value: "all", label: "All Categories" },
@@ -365,9 +365,7 @@ const InventoryPage: React.FC = () => {
     setSearchTerm("");
   };
 
-  const handleShowItemHistory = (item: Item) => {
-    setSelectedHistoryItem(item);
-  };
+
 
   return (
     <MainLayout>
@@ -504,7 +502,7 @@ const InventoryPage: React.FC = () => {
         onUpdate={handleUpdateItem}
         onDelete={handleDeleteItem}
         onEdit={(item) => setEditingItem(item)}
-        onShowHistory={handleShowItemHistory}
+
         isLoading={loading}
       />
 
@@ -532,13 +530,7 @@ const InventoryPage: React.FC = () => {
 
 
 
-      {selectedHistoryItem && (
-        <StockHistoryModal
-          itemId={selectedHistoryItem.id}
-          itemName={selectedHistoryItem.name}
-          onClose={() => setSelectedHistoryItem(null)}
-        />
-      )}
+
 
       {showCategoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
