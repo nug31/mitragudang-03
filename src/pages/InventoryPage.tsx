@@ -244,7 +244,7 @@ const InventoryPage: React.FC = () => {
     return true;
   });
 
-  // Define the stock history entry interface
+  // Define the stock history entry interface (matching database column names)
   interface StockHistoryEntry {
     id: number;
     item_id: number;
@@ -254,7 +254,7 @@ const InventoryPage: React.FC = () => {
     quantity_after: number;
     notes?: string;
     created_by?: string;
-    created_at: string;
+    createdAt: string; // Database uses camelCase
     item_name?: string;
     category?: string;
   }
@@ -287,10 +287,11 @@ const InventoryPage: React.FC = () => {
       }
 
       const exportData = incomingHistory.map((entry) => {
-        const date = new Date(entry.created_at);
+        const date = new Date(entry.createdAt);
+        const isValidDate = !isNaN(date.getTime());
         return {
-          Tanggal: date.toLocaleDateString("id-ID"),
-          Jam: date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+          Tanggal: isValidDate ? date.toLocaleDateString("id-ID") : "-",
+          Jam: isValidDate ? date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-",
           "Nama Barang": entry.item_name || `Item #${entry.item_id}`,
           Kategori: entry.category || "-",
           "Perubahan (+)": `+${entry.quantity_change}`,
@@ -329,10 +330,11 @@ const InventoryPage: React.FC = () => {
       }
 
       const exportData = outgoingHistory.map((entry) => {
-        const date = new Date(entry.created_at);
+        const date = new Date(entry.createdAt);
+        const isValidDate = !isNaN(date.getTime());
         return {
-          Tanggal: date.toLocaleDateString("id-ID"),
-          Jam: date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+          Tanggal: isValidDate ? date.toLocaleDateString("id-ID") : "-",
+          Jam: isValidDate ? date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-",
           "Nama Barang": entry.item_name || `Item #${entry.item_id}`,
           Kategori: entry.category || "-",
           "Perubahan (-)": entry.quantity_change,
