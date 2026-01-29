@@ -171,6 +171,28 @@ app.get("/api/stock-summary", async (req, res) => {
     }
 });
 
+// Global Stock History (last 30 days)
+app.get("/api/stock-history", async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+        const result = await db.query(`
+            SELECT sh.*, i.name as item_name, i.category 
+            FROM stock_history sh 
+            JOIN items i ON sh."item_id" = i.id 
+            WHERE sh."createdAt" >= $1
+            ORDER BY sh."createdAt" DESC
+        `, [thirtyDaysAgoStr]);
+
+        res.json({ history: result.rows });
+    } catch (error) {
+        console.error("Global Stock History error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.get("/api/stock-history/item/:itemId", async (req, res) => {
     try {
         const { itemId } = req.params;

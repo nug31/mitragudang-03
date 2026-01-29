@@ -261,7 +261,7 @@ const InventoryPage: React.FC = () => {
 
   const fetchStockHistory = async (): Promise<StockHistoryEntry[]> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/items?include_history=true`);
+      const response = await fetch(`${API_BASE_URL}/stock-history`);
       if (!response.ok) {
         throw new Error("Failed to fetch stock history");
       }
