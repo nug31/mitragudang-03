@@ -245,18 +245,46 @@ app.get("/api/setup-categories", async (req, res) => {
     }
 });
 
-// Categories API
+// Categories API - with robust auto-sync
 app.get("/api/categories", async (req, res) => {
     try {
-        // Run setup implicitly if table missing (error handling) or just fetch
-        const result = await db.query("SELECT * FROM categories ORDER BY name");
+        // 1. Fetch existing categories
+        let result = await db.query("SELECT * FROM categories ORDER BY name");
+
+        // 2. Sync with items table (Self-Healing) to ensure we never have empty categories if items exist
+        // Fetch distinct categories from items that are NOT in categories table
+        const missingResult = await db.query(`
+            SELECT DISTINCT i.category 
+            FROM items i 
+            LEFT JOIN categories c ON i.category = c.name 
+            WHERE i.category IS NOT NULL 
+            AND i.category != '' 
+            AND c.id IS NULL
+        `);
+
+        if (missingResult.rows.length > 0) {
+            console.log(`Found ${missingResult.rows.length} missing categories. Syncing...`);
+
+            // Insert missing categories
+            for (const row of missingResult.rows) {
+                await db.query(`
+                    INSERT INTO categories (name, description) 
+                    VALUES ($1, $2) 
+                    ON CONFLICT (name) DO NOTHING
+                `, [row.category, `${row.category} items`]);
+            }
+
+            // Re-fetch to get complete list and correct IDs
+            result = await db.query("SELECT * FROM categories ORDER BY name");
+        }
+
         res.json({ success: true, categories: result.rows });
     } catch (error) {
-        // Fallback or legacy handled if table exists but empty? No, error usually means table missing.
-        if (error.code === '42P01') { // undefined_table
+        // Fallback for undefined_table (if migration failed significantly)
+        if (error.code === '42P01') {
             try {
+                // Return derived objects from items
                 const result = await db.query("SELECT DISTINCT category FROM items WHERE category IS NOT NULL ORDER BY category");
-                // Return as objects to match new schema
                 res.json({
                     success: true,
                     categories: result.rows.map((r, i) => ({
