@@ -441,6 +441,71 @@ app.post("/api/users", async (req, res) => {
     }
 });
 
+// Update user
+app.put("/api/users/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, email, password, role } = req.body;
+
+        const existingResult = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (existingResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const updates = [];
+        const params = [];
+        let paramIdx = 1;
+
+        if (username !== undefined) {
+            updates.push(`name = $${paramIdx++}`);
+            params.push(username);
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramIdx++}`);
+            params.push(email);
+        }
+        if (password !== undefined && password !== "") {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updates.push(`password = $${paramIdx++}`);
+            params.push(hashedPassword);
+        }
+        if (role !== undefined) {
+            updates.push(`role = $${paramIdx++}`);
+            params.push(role);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: "No fields to update" });
+        }
+
+        params.push(id);
+        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIdx} RETURNING id, name as username, email, role`;
+        const result = await db.query(query, params);
+
+        res.json({ success: true, user: result.rows[0] });
+    } catch (error) {
+        console.error("Update user error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Delete user
+app.delete("/api/users/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query('DELETE FROM users WHERE id = $1', [id]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        res.json({ success: true, message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Delete user error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Requests API
 app.get("/api/requests", async (req, res) => {
     try {

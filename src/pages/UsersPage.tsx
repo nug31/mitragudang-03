@@ -18,7 +18,6 @@ import Select from "../components/ui/Select";
 import { User } from "../types";
 import UserFormModal from "../components/users/UserFormModal";
 import { userService } from "../services/userService";
-import { API_BASE_URL } from "../config";
 
 const UsersPage: React.FC = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -65,46 +64,19 @@ const UsersPage: React.FC = () => {
   const handleSaveUser = async (userData: any) => {
     try {
       if (editingUser) {
-        // Update existing user
-        const response = await fetch(
-          `${API_BASE_URL}/users/${editingUser.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(userData),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to update user");
-        }
-
-        const data = await response.json();
+        // Update existing user via service
+        const updatedUser = await userService.updateUser(editingUser.id, userData);
 
         // Update user in state
         setUsers(
-          users.map((user) => (user.id === editingUser.id ? data.user : user))
+          users.map((user) => (user.id === editingUser.id ? updatedUser : user))
         );
       } else {
-        // Create new user
-        const response = await fetch(`${API_BASE_URL}/users`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(userData),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to create user");
-        }
-
-        const data = await response.json();
+        // Create new user via service
+        const newUser = await userService.createUser(userData);
 
         // Add new user to state
-        setUsers([...users, data.user]);
+        setUsers([...users, newUser]);
       }
 
       // Close modal
