@@ -13,9 +13,6 @@ import {
   FileSpreadsheet,
   ListFilter,
   Search,
-
-  ArrowUpCircle,
-  ArrowDownCircle,
 } from "lucide-react";
 import InventoryList from "../components/inventory/InventoryList";
 import AddItemModal from "../components/inventory/AddItemModal";
@@ -27,14 +24,13 @@ import BrowseItemsModal from "../components/inventory/BrowseItemsModal";
 
 import Select from "../components/ui/Select";
 import Input from "../components/ui/Input";
-import * as XLSX from "xlsx";
 import { itemService } from "../services/itemService";
 import { categoryService } from "../services/categoryService";
 import { normalizeCategory, categoriesAreEqual } from "../utils/categoryUtils";
 import { API_BASE_URL } from "../config";
 
 const InventoryPage: React.FC = () => {
-  const { user } = useAuth();
+  useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -254,121 +250,6 @@ const InventoryPage: React.FC = () => {
     return true;
   });
 
-  // Define the stock history entry interface (matching database column names)
-  interface StockHistoryEntry {
-    id: number;
-    item_id: number;
-    change_type: string;
-    quantity_before: number;
-    quantity_change: number;
-    quantity_after: number;
-    notes?: string;
-    created_by?: string;
-    createdAt: string; // Database uses camelCase
-    item_name?: string;
-    category?: string;
-  }
-
-  const fetchStockHistory = async (): Promise<StockHistoryEntry[]> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/stock-history`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch stock history");
-      }
-      const data = await response.json();
-      return data.history || [];
-    } catch (err) {
-      console.error("Error fetching stock history:", err);
-      return [];
-    }
-  };
-
-  const exportIncomingStockToExcel = async () => {
-    try {
-      setLoading(true);
-      const history = await fetchStockHistory();
-
-      // Filter for incoming stock (positive quantity_change)
-      const incomingHistory = history.filter((entry) => entry.quantity_change > 0);
-
-      if (incomingHistory.length === 0) {
-        alert("Tidak ada riwayat barang masuk untuk diekspor.");
-        return;
-      }
-
-      const exportData = incomingHistory.map((entry) => {
-        const date = new Date(entry.createdAt);
-        const isValidDate = !isNaN(date.getTime());
-        return {
-          Tanggal: isValidDate ? date.toLocaleDateString("id-ID") : "-",
-          Jam: isValidDate ? date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-",
-          "Nama Barang": entry.item_name || `Item #${entry.item_id}`,
-          Kategori: entry.category || "-",
-          "Perubahan (+)": `+${entry.quantity_change}`,
-          "Stok Sebelum": entry.quantity_before,
-          "Stok Setelah": entry.quantity_after,
-          Catatan: entry.notes || "-",
-          "Oleh": entry.created_by || "-",
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Barang Masuk");
-
-      const filename = `Barang_Masuk_${new Date().toISOString().split("T")[0]}.xlsx`;
-      XLSX.writeFile(workbook, filename);
-    } catch (err) {
-      console.error("Error exporting incoming stock:", err);
-      setError("Failed to export incoming stock history");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportOutgoingStockToExcel = async () => {
-    try {
-      setLoading(true);
-      const history = await fetchStockHistory();
-
-      // Filter for outgoing stock (negative quantity_change)
-      const outgoingHistory = history.filter((entry) => entry.quantity_change < 0);
-
-      if (outgoingHistory.length === 0) {
-        alert("Tidak ada riwayat barang keluar untuk diekspor.");
-        return;
-      }
-
-      const exportData = outgoingHistory.map((entry) => {
-        const date = new Date(entry.createdAt);
-        const isValidDate = !isNaN(date.getTime());
-        return {
-          Tanggal: isValidDate ? date.toLocaleDateString("id-ID") : "-",
-          Jam: isValidDate ? date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-",
-          "Nama Barang": entry.item_name || `Item #${entry.item_id}`,
-          Kategori: entry.category || "-",
-          "Perubahan (-)": entry.quantity_change,
-          "Stok Sebelum": entry.quantity_before,
-          "Stok Setelah": entry.quantity_after,
-          Catatan: entry.notes || "-",
-          "Oleh": entry.created_by || "-",
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Barang Keluar");
-
-      const filename = `Barang_Keluar_${new Date().toISOString().split("T")[0]}.xlsx`;
-      XLSX.writeFile(workbook, filename);
-    } catch (err) {
-      console.error("Error exporting outgoing stock:", err);
-      setError("Failed to export outgoing stock history");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const resetFilters = () => {
     setCategoryFilter("all");
     setStatusFilter("all");
@@ -394,24 +275,6 @@ const InventoryPage: React.FC = () => {
           </div>
           <div className="flex flex-wrap gap-2 lg:gap-3">
 
-            <Button
-              variant="outline"
-              onClick={exportIncomingStockToExcel}
-              icon={<ArrowUpCircle className="h-4 w-4 text-green-600" />}
-              className="flex-shrink-0 border-green-200 text-green-700 hover:bg-green-50"
-              size="sm"
-            >
-              Barang Masuk (Excel)
-            </Button>
-            <Button
-              variant="outline"
-              onClick={exportOutgoingStockToExcel}
-              icon={<ArrowDownCircle className="h-4 w-4 text-red-600" />}
-              className="flex-shrink-0 border-red-200 text-red-700 hover:bg-red-50"
-              size="sm"
-            >
-              Barang Keluar (Excel)
-            </Button>
             <Button
               variant="secondary"
               onClick={() => setShowBrowseModal(true)}
