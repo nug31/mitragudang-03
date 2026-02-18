@@ -241,7 +241,7 @@ const InventoryPage: React.FC = () => {
     // Case-insensitive search in name and description
     if (searchTerm) {
       const searchTermLower = searchTerm.toLowerCase();
-      const nameMatch = item.name.toLowerCase().includes(searchTermLower);
+      const nameMatch = item.name?.toLowerCase().includes(searchTermLower);
       const descriptionMatch = item.description
         ?.toLowerCase()
         .includes(searchTermLower);

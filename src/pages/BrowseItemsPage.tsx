@@ -62,9 +62,9 @@ const BrowseItemsPage: React.FC = () => {
               'other': 'Other'
             };
             return categoryMapping[categoryString] ||
-                   categoryString.split('-').map(word =>
-                     word.charAt(0).toUpperCase() + word.slice(1)
-                   ).join(' ');
+              categoryString.split('-').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1)
+              ).join(' ');
           };
 
           const options = data.categories.map((categoryName: string) => ({
@@ -126,7 +126,7 @@ const BrowseItemsPage: React.FC = () => {
     // Case-insensitive search in name and description
     if (searchTerm) {
       const searchTermLower = searchTerm.toLowerCase();
-      const nameMatch = item.name.toLowerCase().includes(searchTermLower);
+      const nameMatch = item.name?.toLowerCase().includes(searchTermLower);
       const descriptionMatch = item.description
         ?.toLowerCase()
         .includes(searchTermLower);
@@ -250,13 +250,12 @@ const BrowseItemsPage: React.FC = () => {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">Status:</span>
                     <span
-                      className={`font-medium ${
-                        item.status === "in-stock"
-                          ? "text-green-600"
-                          : item.status === "low-stock"
+                      className={`font-medium ${item.status === "in-stock"
+                        ? "text-green-600"
+                        : item.status === "low-stock"
                           ? "text-amber-600"
                           : "text-red-600"
-                      }`}
+                        }`}
                     >
                       {item.status
                         .split("-")
@@ -272,7 +271,7 @@ const BrowseItemsPage: React.FC = () => {
                   item.status !== "out-of-stock" &&
                   item.quantity > 0 && (
                     <div className="mt-4">
-                      {item.category.toLowerCase() === 'electronics' ? (
+                      {item.category?.toLowerCase() === 'electronics' ? (
                         <Button
                           variant="primary"
                           fullWidth

@@ -55,7 +55,7 @@ const RequestList: React.FC<RequestListProps> = ({
     }
 
     // Search term filter
-    if (searchTerm && !request.itemName.toLowerCase().includes(searchTerm.toLowerCase())) {
+    if (searchTerm && !request.itemName?.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
 

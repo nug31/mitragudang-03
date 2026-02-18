@@ -18,6 +18,7 @@ import Select from "../components/ui/Select";
 import { User } from "../types";
 import UserFormModal from "../components/users/UserFormModal";
 import { userService } from "../services/userService";
+import { API_BASE_URL } from "../config";
 
 const UsersPage: React.FC = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -141,12 +142,12 @@ const UsersPage: React.FC = () => {
 
   const filteredUsers = users.filter((user) => {
     if (roleFilter !== "all" && user.role !== roleFilter) return false;
-    if (
-      searchTerm &&
-      !user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-      return false;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      const nameMatch = user.username?.toLowerCase()?.includes(lowerSearch);
+      const emailMatch = user.email?.toLowerCase()?.includes(lowerSearch);
+      if (!nameMatch && !emailMatch) return false;
+    }
     return true;
   });
 
@@ -263,7 +264,7 @@ const UsersPage: React.FC = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.name}
+                          {user.username}
                         </div>
                         <div className="text-sm text-gray-500">
                           {user.email}
@@ -273,13 +274,12 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        ${
-                          user.role === "admin"
+                        ${user.role === "admin"
                             ? "bg-purple-100 text-purple-800"
                             : user.role === "manager"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
                       >
                         {user.role}
                       </span>
