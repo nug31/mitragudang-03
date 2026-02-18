@@ -111,9 +111,9 @@ export const exportRequestsToExcel = (
     "Requested Delivery": request.requestedDeliveryDate ?
       new Date(request.requestedDeliveryDate).toLocaleDateString() : "",
     "Created Date": request.createdAt ?
-      new Date(request.createdAt).toLocaleDateString() : "",
+      new Date(request.createdAt).toLocaleString('id-ID') : "",
     "Updated Date": request.updatedAt ?
-      new Date(request.updatedAt).toLocaleDateString() : ""
+      new Date(request.updatedAt).toLocaleString('id-ID') : ""
   }));
 
   // Create a worksheet from the data
@@ -134,8 +134,8 @@ export const exportRequestsToExcel = (
     { wch: 20 }, // Project
     { wch: 40 }, // Description
     { wch: 15 }, // Requested Delivery
-    { wch: 15 }, // Created Date
-    { wch: 15 }  // Updated Date
+    { wch: 20 }, // Created Date (Time inclusive)
+    { wch: 20 }  // Updated Date (Time inclusive)
   ];
 
   ws["!cols"] = colWidths;
@@ -265,10 +265,10 @@ export const exportMonthlyReportToExcel = (
       ? new Date(request.requestedDeliveryDate).toLocaleDateString()
       : "",
     "Created Date": request.createdAt
-      ? new Date(request.createdAt).toLocaleDateString()
+      ? new Date(request.createdAt).toLocaleString('id-ID')
       : "",
     "Updated Date": request.updatedAt
-      ? new Date(request.updatedAt).toLocaleDateString()
+      ? new Date(request.updatedAt).toLocaleString('id-ID')
       : "",
   }));
 
@@ -287,8 +287,8 @@ export const exportMonthlyReportToExcel = (
     { wch: 20 }, // Project
     { wch: 40 }, // Description
     { wch: 15 }, // Requested Delivery
-    { wch: 15 }, // Created Date
-    { wch: 15 }, // Updated Date
+    { wch: 20 }, // Created Date (Time inclusive)
+    { wch: 20 }, // Updated Date (Time inclusive)
   ];
   XLSX.utils.book_append_sheet(wb, detailWs, "Detailed Requests");
 
