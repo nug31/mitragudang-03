@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import AppRouter from "./router/AppRouter";
 import Favicon from "./components/ui/Favicon";
 import SplashScreen from "./components/ui/SplashScreen";
+import { APP_NAME } from "./config";
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -29,6 +30,11 @@ function App() {
       setShowSplash(false);
       setIsReady(true);
     }
+  }, []);
+
+  useEffect(() => {
+    // Dynamically update document title
+    document.title = APP_NAME;
   }, []);
 
   const handleSplashComplete = () => {
