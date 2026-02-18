@@ -1,4 +1,4 @@
-import React from "react";
+// types/index.ts
 
 export type UserRole = "admin" | "user" | "manager";
 
@@ -47,8 +47,17 @@ export interface ItemRequest {
   projectName?: string;
   requesterName?: string;
   requesterEmail?: string;
-  items?: any[];
+  items?: Array<{
+    item_id: string;
+    quantity: number;
+    name: string;
+    category: string;
+    stock_before?: number;
+    stock_after?: number;
+  }>;
   unit?: string; // Unit of measurement for the requested item (pcs, rim, box, etc.)
+  stock_before?: number; // Legacy/Single-item support
+  stock_after?: number;
 }
 
 // Chat functionality removed

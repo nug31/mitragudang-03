@@ -530,7 +530,9 @@ app.get("/api/requests", async (req, res) => {
             'item_id', ri."item_id", 
             'quantity', ri.quantity, 
             'name', i.name, 
-            'category', i.category
+            'category', i.category,
+            'stock_before', ri.stock_before,
+            'stock_after', ri.stock_after
           ))
           FROM request_items ri
           JOIN items i ON ri."item_id" = i.id
@@ -561,7 +563,9 @@ app.get("/api/requests/user/:userId", async (req, res) => {
             'item_id', ri."item_id", 
             'quantity', ri.quantity, 
             'name', i.name, 
-            'category', i.category
+            'category', i.category,
+            'stock_before', ri.stock_before,
+            'stock_after', ri.stock_after
           ))
           FROM request_items ri
           JOIN items i ON ri."item_id" = i.id
@@ -939,6 +943,9 @@ app.patch("/api/requests/:id/status", async (req, res) => {
 
                     // Update item
                     await client.query('UPDATE items SET quantity = $1, status = $2 WHERE id = $3', [newQty, itemStatus, item.item_id]);
+
+                    // Update request_item with stock snapshot
+                    await client.query('UPDATE request_items SET stock_before = $1, stock_after = $2 WHERE request_id = $3 AND item_id = $4', [item.current_qty, newQty, id, item.item_id]);
 
                     // Insert history
                     const note = `Approved request ${id}`;

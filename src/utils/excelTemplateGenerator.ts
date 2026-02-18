@@ -100,6 +100,8 @@ export const exportRequestsToExcel = (
     "Request ID": request.id,
     "Item Name": request.itemName,
     "Quantity": request.quantity,
+    "Stock Sebelum": request.items && request.items.length > 0 ? request.items[0].stock_before ?? "" : "",
+    "Stock Sesudah": request.items && request.items.length > 0 ? request.items[0].stock_after ?? "" : "",
     "Priority": request.priority.charAt(0).toUpperCase() + request.priority.slice(1),
     "Status": request.status.charAt(0).toUpperCase() + request.status.slice(1),
     "Requester": request.requesterName || `User ${request.userId}`,
@@ -123,6 +125,8 @@ export const exportRequestsToExcel = (
     { wch: 15 }, // Request ID
     { wch: 25 }, // Item Name
     { wch: 10 }, // Quantity
+    { wch: 15 }, // Stock Sebelum
+    { wch: 15 }, // Stock Sesudah
     { wch: 10 }, // Priority
     { wch: 12 }, // Status
     { wch: 20 }, // Requester
@@ -249,6 +253,8 @@ export const exportMonthlyReportToExcel = (
     "Request ID": request.id,
     "Item Name": request.itemName,
     "Quantity": request.quantity,
+    "Stock Sebelum": request.items && request.items.length > 0 ? request.items[0].stock_before ?? "" : "",
+    "Stock Sesudah": request.items && request.items.length > 0 ? request.items[0].stock_after ?? "" : "",
     "Priority": request.priority.charAt(0).toUpperCase() + request.priority.slice(1),
     "Status": request.status.charAt(0).toUpperCase() + request.status.slice(1),
     "Requester": request.requesterName || `User ${request.userId}`,
@@ -272,6 +278,8 @@ export const exportMonthlyReportToExcel = (
     { wch: 15 }, // Request ID
     { wch: 25 }, // Item Name
     { wch: 10 }, // Quantity
+    { wch: 15 }, // Stock Sebelum
+    { wch: 15 }, // Stock Sesudah
     { wch: 10 }, // Priority
     { wch: 12 }, // Status
     { wch: 20 }, // Requester

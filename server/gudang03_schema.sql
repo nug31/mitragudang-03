@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS request_items (
   "request_id" VARCHAR(255) REFERENCES requests(id) ON DELETE CASCADE,
   "item_id" INT REFERENCES items(id) ON DELETE CASCADE,
   quantity INT NOT NULL,
+  "stock_before" INT,
+  "stock_after" INT,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
