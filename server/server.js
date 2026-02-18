@@ -493,6 +493,16 @@ app.put("/api/users/:id", async (req, res) => {
 app.delete("/api/users/:id", async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Handle foreign key constraints manually for better stability
+        // Nullify requester_id in requests so history is preserved but user can be deleted
+        await db.query('UPDATE requests SET requester_id = NULL WHERE requester_id = $1', [id]);
+
+        // Nullify created_by in stock_history
+        await db.query('UPDATE stock_history SET created_by = NULL WHERE created_by = $1', [id]);
+
+        // Notifications are CASCADE, so they will be deleted automatically
+
         const result = await db.query('DELETE FROM users WHERE id = $1', [id]);
 
         if (result.rowCount === 0) {
