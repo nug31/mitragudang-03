@@ -40,60 +40,62 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
                 ))}
             </div>
 
-            <div className="w-full max-w-[450px] flex flex-col items-center relative z-10 animate-fade-in">
-                {/* Simplified Top Branding */}
-                <div className="flex flex-col items-center space-y-4 mb-8 text-center">
-                    <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/30 transform transition-transform hover:scale-105 duration-300">
-                        <LogIn className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+            <div className="w-full max-w-[500px] flex flex-col items-center space-y-8 relative z-10 text-center">
+                {/* Branding/Intro Section */}
+                <div className="flex flex-col items-center space-y-6 text-white animate-fade-in-up w-full">
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="p-4 bg-blue-600 rounded-3xl shadow-2xl shadow-blue-500/40 animate-scale-in">
+                            <LogIn className="w-10 h-10 text-white" />
+                        </div>
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-white to-gray-500 bg-clip-text text-transparent">
                             {title}
                         </h1>
-                        <p className="text-gray-400 text-sm font-medium tracking-wide">
-                            Management System
-                        </p>
+                        <p className="text-gray-400 font-medium tracking-wide uppercase text-sm">Management System</p>
                     </div>
                 </div>
 
-                {/* Main Content (Login/Register Card) */}
+                {/* Modern subtle divider/info (optional) */}
+                <div className="hidden lg:block w-16 h-1 bg-blue-600/30 rounded-full"></div>
+
+
+                {/* Login/Register Form Content */}
                 <div className="w-full px-2">
                     {children}
                 </div>
 
-                {/* Simple Centered Footer */}
-                <footer className="mt-12 flex flex-col items-center space-y-4 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                {/* Centered Desktop Branding/Contact (Footer) */}
+                <div className="flex flex-col items-center space-y-4 pt-8 animate-fade-in-up stagger-5 border-t border-white/5 w-full">
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em]">Developed By</p>
                     <div className="flex items-center space-x-6">
                         <a
                             href="https://jsnportofolio.netlify.app/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 bg-white/5 hover:bg-blue-600/20 border border-white/10 rounded-lg transition-all"
+                            className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
                             title="Portfolio"
                         >
-                            <Globe className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                            <Globe className="w-5 h-5 text-gray-400 hover:text-blue-400" />
                         </a>
                         <a
                             href="https://instagram.com/j.s_nugroho"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 bg-white/5 hover:bg-pink-600/20 border border-white/10 rounded-lg transition-all"
+                            className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
                             title="Instagram"
                         >
-                            <Instagram className="w-4 h-4 text-gray-400 hover:text-pink-500" />
+                            <Instagram className="w-5 h-5 text-gray-400 hover:text-pink-500" />
                         </a>
                         <a
                             href="https://github.com/jsnugroho"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                            className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
                             title="GitHub"
                         >
-                            <Github className="w-4 h-4 text-gray-400 hover:text-white" />
+                            <Github className="w-5 h-5 text-gray-400 hover:text-white" />
                         </a>
                     </div>
-                </footer>
+                </div>
             </div>
         </div>
     );

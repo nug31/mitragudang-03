@@ -6,7 +6,6 @@ import Button from "../components/ui/Button";
 import Logo from "../components/ui/Logo";
 import { Card, CardContent } from "../components/ui/Card";
 import { CheckCircle, LogOut, Home, LogIn } from "lucide-react";
-import { APP_NAME } from "../config";
 
 const LogoutPage: React.FC = () => {
   const { logout, user } = useAuth();
@@ -50,7 +49,7 @@ const LogoutPage: React.FC = () => {
                   Please wait while we securely log you out.
                 </p>
               </div>
-
+              
               {/* Loading animation */}
               <div className="flex justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -79,7 +78,7 @@ const LogoutPage: React.FC = () => {
                 You have been securely logged out of your account.
               </p>
               <p className="text-sm text-gray-500">
-                Thank you for using {APP_NAME} Item Request System.
+                Thank you for using Gudang Mitra Item Request System.
               </p>
             </div>
 
@@ -94,7 +93,7 @@ const LogoutPage: React.FC = () => {
               >
                 Go to Homepage
               </Button>
-
+              
               <Button
                 variant="outline"
                 fullWidth
@@ -111,7 +110,7 @@ const LogoutPage: React.FC = () => {
               <div className="flex items-center justify-center mb-3">
                 <Logo size={24} className="mr-2" />
                 <span className="text-sm font-medium text-gray-700">
-                  {APP_NAME}
+                  Gudang Mitra
                 </span>
               </div>
               <p className="text-xs text-gray-500">

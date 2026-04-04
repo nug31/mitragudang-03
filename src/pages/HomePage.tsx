@@ -142,172 +142,169 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Authenticated user content */}
-      {isAdmin && dashboardStats && (
-        <>
-          {/* Main Dashboard Statistics */}
-          <DashboardStats
-            stats={dashboardStats}
-            isLoading={dashboardLoading}
-          />
+          {isAdmin && dashboardStats && (
+            <>
+              {/* Main Dashboard Statistics */}
+              <DashboardStats
+                stats={dashboardStats}
+                isLoading={dashboardLoading}
+              />
 
-          {/* Dashboard Widgets */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <TopRequestedItems
-              items={dashboardStats.topRequestedItems}
-              isLoading={dashboardLoading}
-            />
-            <RecentActivity
-              activities={dashboardStats.recentActivity}
-              isLoading={dashboardLoading}
-            />
-          </div>
+              {/* Dashboard Widgets */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <TopRequestedItems
+                  items={dashboardStats.topRequestedItems}
+                  isLoading={dashboardLoading}
+                />
+                <RecentActivity
+                  activities={dashboardStats.recentActivity}
+                  isLoading={dashboardLoading}
+                />
+              </div>
 
-          {/* Quick Actions */}
-          <div className={`mb-6 grid grid-cols-1 ${user?.role === "manager" ? "md:grid-cols-3" : "md:grid-cols-2"} gap-4`}>
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Manage Inventory
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Add, edit, or remove items from inventory
-                    </p>
-                    <Button variant="primary" href="/inventory" size="sm">
-                      Go to Inventory
-                    </Button>
-                  </div>
-                  <Package className="h-12 w-12 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      View All Requests
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Review and manage all user requests
-                    </p>
-                    <Button variant="primary" href="/requests" size="sm">
-                      View Requests
-                    </Button>
-                  </div>
-                  <ClipboardList className="h-12 w-12 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Only show User Management for managers */}
-            {user?.role === "manager" && (
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        User Management
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Manage user accounts and permissions
-                      </p>
-                      <Button variant="primary" href="/users" size="sm">
-                        Manage Users
-                      </Button>
+              {/* Quick Actions */}
+              <div className={`mb-6 grid grid-cols-1 ${user?.role === "manager" ? "md:grid-cols-3" : "md:grid-cols-2"} gap-4`}>
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          Manage Inventory
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Add, edit, or remove items from inventory
+                        </p>
+                        <Button variant="primary" href="/inventory" size="sm">
+                          Go to Inventory
+                        </Button>
+                      </div>
+                      <Package className="h-12 w-12 text-blue-600" />
                     </div>
-                    <Users className="h-12 w-12 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          View All Requests
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Review and manage all user requests
+                        </p>
+                        <Button variant="primary" href="/requests" size="sm">
+                          View Requests
+                        </Button>
+                      </div>
+                      <ClipboardList className="h-12 w-12 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Only show User Management for managers */}
+                {user?.role === "manager" && (
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-200">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            User Management
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Manage user accounts and permissions
+                          </p>
+                          <Button variant="primary" href="/users" size="sm">
+                            Manage Users
+                          </Button>
+                        </div>
+                        <Users className="h-12 w-12 text-purple-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* User Dashboard for Regular Users */}
+          {!isAdmin && userDashboardStats && (
+            <>
+              {/* User Dashboard Statistics */}
+              <UserDashboardStats
+                stats={userDashboardStats}
+                isLoading={dashboardLoading}
+              />
+
+              {/* User Dashboard Widgets */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <UserTopRequestedItems
+                  items={userDashboardStats.myTopRequestedItems}
+                  isLoading={dashboardLoading}
+                />
+                <UserRecentActivity
+                  activities={userDashboardStats.myRecentActivity}
+                  isLoading={dashboardLoading}
+                />
+              </div>
+
+              {/* Quick Actions for Users */}
+              <div className="mb-6 grid grid-cols-1 gap-4">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          Browse Items
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Explore available items to request
+                        </p>
+                        <Button variant="primary" href="/browse" size="sm">
+                          Browse Items
+                        </Button>
+                      </div>
+                      <Package className="h-12 w-12 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+
+          <div className="mb-6 flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center">
+              <ClipboardList className="h-6 w-6 mr-2 text-primary-600" />
+              {isAdmin ? "Recent Requests" : "Your Requests"}
+            </h2>
+            {isAdmin && (
+              <Button variant="outline" href="/requests" className="shadow-3d">
+                View All Requests
+              </Button>
             )}
           </div>
-        </>
-      )}
 
-      {/* User Dashboard for Regular Users */}
-      {!isAdmin && userDashboardStats && (
-        <>
-          {/* User Dashboard Statistics */}
-          <UserDashboardStats
-            stats={userDashboardStats}
-            isLoading={dashboardLoading}
+          <RequestList
+            requests={isAdmin ? requests.slice(0, 5) : requests}
+            isAdmin={isAdmin}
+            onStatusChange={isAdmin ? handleStatusChange : undefined}
+            onDelete={handleDelete}
+            isLoading={loading}
           />
 
-          {/* User Dashboard Widgets */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <UserTopRequestedItems
-              items={userDashboardStats.myTopRequestedItems}
-              isLoading={dashboardLoading}
-            />
-            <UserRecentActivity
-              activities={userDashboardStats.myRecentActivity}
-              isLoading={dashboardLoading}
-            />
-          </div>
-
-          {/* Quick Actions for Users */}
-          <div className="mb-6 grid grid-cols-1 gap-4">
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Browse Items
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Explore available items to request
-                    </p>
-                    <Button variant="primary" href="/browse" size="sm">
-                      Browse Items
-                    </Button>
-                  </div>
-                  <Package className="h-12 w-12 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )
-      }
-
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <ClipboardList className="h-6 w-6 mr-2 text-primary-600" />
-          {isAdmin ? "Recent Requests" : "Your Requests"}
-        </h2>
-        {isAdmin && (
-          <Button variant="outline" href="/requests" className="shadow-3d">
-            View All Requests
-          </Button>
-        )}
-      </div>
-
-      <RequestList
-        requests={isAdmin ? requests.slice(0, 5) : requests}
-        isAdmin={isAdmin}
-        onStatusChange={isAdmin ? handleStatusChange : undefined}
-        onDelete={handleDelete}
-        isLoading={loading}
-      />
-
-      {
-        !isAdmin && requests.length > 0 && (
-          <div className="mt-6 text-right">
-            <Button
-              variant="outline"
-              href="/requests"
-              icon={<ArrowRight className="h-4 w-4 ml-1" />}
-              className="inline-flex items-center"
-            >
-              View All Requests
-            </Button>
-          </div>
-        )
-      }
-    </MainLayout >
+          {!isAdmin && requests.length > 0 && (
+            <div className="mt-6 text-right">
+              <Button
+                variant="outline"
+                href="/requests"
+                icon={<ArrowRight className="h-4 w-4 ml-1" />}
+                className="inline-flex items-center"
+              >
+                View All Requests
+              </Button>
+            </div>
+          )}
+    </MainLayout>
   );
 };
 

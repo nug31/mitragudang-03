@@ -27,6 +27,7 @@ const RequestList: React.FC<RequestListProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [monthFilter, setMonthFilter] = useState<string>('');
 
   const statusOptions = [
     { value: 'all', label: 'All Statuses' },
@@ -55,8 +56,17 @@ const RequestList: React.FC<RequestListProps> = ({
     }
 
     // Search term filter
-    if (searchTerm && !request.itemName?.toLowerCase().includes(searchTerm.toLowerCase())) {
+    if (searchTerm && !request.itemName.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
+    }
+
+    // Month filter
+    if (monthFilter) {
+      const reqDate = new Date(request.createdAt);
+      const reqMonth = `${reqDate.getFullYear()}-${String(reqDate.getMonth() + 1).padStart(2, '0')}`;
+      if (reqMonth !== monthFilter) {
+        return false;
+      }
     }
 
     return true;
@@ -66,6 +76,7 @@ const RequestList: React.FC<RequestListProps> = ({
     setStatusFilter('all');
     setPriorityFilter('all');
     setSearchTerm('');
+    setMonthFilter('');
   };
 
   const handleExportToExcel = () => {
@@ -77,7 +88,7 @@ const RequestList: React.FC<RequestListProps> = ({
   return (
     <div>
       <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
@@ -104,6 +115,16 @@ const RequestList: React.FC<RequestListProps> = ({
             options={priorityOptions}
             className="mb-0"
           />
+
+          <div className="relative">
+            <input
+              type="month"
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="w-full rounded-md border border-gray-300 py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              title="Filter by month"
+            />
+          </div>
         </div>
 
         <div className="flex justify-between items-center mt-4">

@@ -1,10 +1,9 @@
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env.production') });
 const express = require("express");
 const cors = require("cors");
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const db = require('./db');
+require('dotenv').config({ path: '.env.production' });
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -172,24 +171,36 @@ app.get("/api/stock-summary", async (req, res) => {
     }
 });
 
-// Global Stock History (last 30 days)
+// Get all stock history with optional filters (for export)
 app.get("/api/stock-history", async (req, res) => {
     try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+        const { item_id, change_type, limit = 2000 } = req.query;
 
-        const result = await db.query(`
-            SELECT sh.*, i.name as item_name, i.category 
-            FROM stock_history sh 
-            JOIN items i ON sh."item_id" = i.id 
-            WHERE sh."createdAt" >= $1
-            ORDER BY sh."createdAt" DESC
-        `, [thirtyDaysAgoStr]);
+        let query = `
+          SELECT sh.*, i.name as item_name, i.category
+          FROM stock_history sh
+          JOIN items i ON sh."item_id" = i.id
+          WHERE 1=1
+        `;
+        const params = [];
+        let paramIndex = 1;
 
-        res.json({ history: result.rows });
+        if (item_id) {
+            query += ` AND sh."item_id" = $${paramIndex++}`;
+            params.push(item_id);
+        }
+        if (change_type) {
+            query += ` AND sh."change_type" = $${paramIndex++}`;
+            params.push(change_type);
+        }
+
+        query += ` ORDER BY sh."createdAt" DESC LIMIT $${paramIndex}`;
+        params.push(parseInt(limit) || 2000);
+
+        const result = await db.query(query, params);
+        res.json(result.rows);
     } catch (error) {
-        console.error("Global Stock History error:", error);
+        console.error("Stock History error:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -214,186 +225,14 @@ app.get("/api/stock-history/item/:itemId", async (req, res) => {
     }
 });
 
-// Setup Categories Table Endpoint
-app.get("/api/setup-categories", async (req, res) => {
-    try {
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS categories (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) UNIQUE NOT NULL,
-                description TEXT,
-                "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        // Seed from Items if table is empty
-        const countRes = await db.query('SELECT COUNT(*) FROM categories');
-        if (parseInt(countRes.rows[0].count) === 0) {
-            await db.query(`
-                INSERT INTO categories (name, description)
-                SELECT DISTINCT category, category || ' items'
-                FROM items
-                WHERE category IS NOT NULL AND category != ''
-                ON CONFLICT (name) DO NOTHING;
-            `);
-        }
-
-        res.json({ success: true, message: "Categories table setup complete" });
-    } catch (error) {
-        console.error("Setup categories error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Categories API - with robust auto-sync and on-the-fly migration (Netlify compatible)
+// Categories API
 app.get("/api/categories", async (req, res) => {
     try {
-        // 0. Ensure table and constraints exist (Robustness for partial migrations)
-        try {
-            await db.query(`
-                CREATE TABLE IF NOT EXISTS categories (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) UNIQUE NOT NULL,
-                    description TEXT,
-                    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
-
-            // Migration: Add createdAt if missing
-            await db.query(`
-                DO $$ 
-                BEGIN 
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='createdAt') THEN 
-                        ALTER TABLE categories ADD COLUMN "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP; 
-                    END IF; 
-                END $$;
-            `);
-
-            // Migration: Add updatedAt if missing
-            await db.query(`
-                DO $$ 
-                BEGIN 
-                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='updatedAt') THEN 
-                        ALTER TABLE categories ADD COLUMN "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP; 
-                    END IF; 
-                END $$;
-            `);
-
-            // Migration: Add UNIQUE constraint if missing
-            await db.query(`
-                DO $$ 
-                BEGIN 
-                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'categories_name_key') THEN 
-                        ALTER TABLE categories ADD CONSTRAINT categories_name_key UNIQUE (name); 
-                    END IF; 
-                END $$;
-            `);
-        } catch (setupErr) {
-            console.warn("Pre-fetch setup warning (ignorable if table exists):", setupErr.message);
-        }
-
-        // 1. Try to fetch existing categories
-        let result = await db.query("SELECT * FROM categories ORDER BY name");
-
-        // 2. Sync with items table (Self-Healing) - IMPROVED: Case-insensitive check & only ACTIVE items
-        const missingResult = await db.query(`
-            SELECT DISTINCT i.category 
-            FROM items i 
-            LEFT JOIN categories c ON LOWER(i.category) = LOWER(c.name)
-            WHERE (i."isActive" = 1 OR i."isActive" IS NULL)
-            AND i.category IS NOT NULL 
-            AND i.category != '' 
-            AND c.id IS NULL
-        `);
-
-        if (missingResult.rows.length > 0) {
-            console.log(`Found ${missingResult.rows.length} missing categories. Syncing...`);
-            for (const row of missingResult.rows) {
-                // Ensure we don't insert duplicate if another row in the same loop matches by case
-                await db.query(`
-                    INSERT INTO categories (name, description) 
-                    VALUES ($1, $2) 
-                    ON CONFLICT (name) DO NOTHING
-                `, [row.category, `${row.category} items`]);
-            }
-            result = await db.query("SELECT * FROM categories ORDER BY name");
-        }
-
-        res.json({ success: true, categories: result.rows });
+        const result = await db.query("SELECT DISTINCT category FROM items WHERE category IS NOT NULL ORDER BY category");
+        res.json({ success: true, categories: result.rows.map(r => r.category) });
     } catch (error) {
-        console.error("Categories API Error:", error);
-        // Provide enough detail to debug in browser console
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            code: error.code,
-            detail: "Database error occurred during category fetch/sync. Check server logs or connection."
-        });
-    }
-});
-
-app.post("/api/categories", async (req, res) => {
-    try {
-        const { name, description } = req.body;
-        if (!name) return res.status(400).json({ success: false, message: "Name required" });
-
-        const result = await db.query(
-            'INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING *',
-            [name, description]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error("Create category error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.put("/api/categories/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, description } = req.body;
-
-        const result = await db.query(
-            'UPDATE categories SET name = $1, description = $2, "updatedAt" = NOW() WHERE id = $3 RETURNING *',
-            [name, description, id]
-        );
-
-        if (result.rowCount === 0) return res.status(404).json({ success: false, message: "Category not found" });
-
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error("Update category error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.delete("/api/categories/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Check if category is in use
-        const catResult = await db.query('SELECT name FROM categories WHERE id = $1', [id]);
-        if (catResult.rows.length > 0) {
-            const categoryName = catResult.rows[0].name;
-            const useCount = await db.query('SELECT COUNT(*) FROM items WHERE category = $1 AND ("isActive" = 1 OR "isActive" IS NULL)', [categoryName]);
-
-            if (parseInt(useCount.rows[0].count) > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Tidak dapat menghapus. Masih ada ${useCount.rows[0].count} barang aktif yang menggunakan kategori "${categoryName}". Silakan ubah kategori barang tersebut terlebih dahulu.`
-                });
-            }
-        }
-
-        const result = await db.query('DELETE FROM categories WHERE id = $1', [id]);
-        if (result.rowCount === 0) return res.status(404).json({ success: false, message: "Category not found" });
-
-        res.json({ success: true });
-    } catch (err) {
-        console.error("Delete category error:", err);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Categories error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -441,81 +280,6 @@ app.post("/api/users", async (req, res) => {
     }
 });
 
-// Update user
-app.put("/api/users/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { username, email, password, role } = req.body;
-
-        const existingResult = await db.query('SELECT * FROM users WHERE id = $1', [id]);
-        if (existingResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: "User not found" });
-        }
-
-        const updates = [];
-        const params = [];
-        let paramIdx = 1;
-
-        if (username !== undefined) {
-            updates.push(`name = $${paramIdx++}`);
-            params.push(username);
-        }
-        if (email !== undefined) {
-            updates.push(`email = $${paramIdx++}`);
-            params.push(email);
-        }
-        if (password !== undefined && password !== "") {
-            const hashedPassword = await bcrypt.hash(password, 10);
-            updates.push(`password = $${paramIdx++}`);
-            params.push(hashedPassword);
-        }
-        if (role !== undefined) {
-            updates.push(`role = $${paramIdx++}`);
-            params.push(role);
-        }
-
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, message: "No fields to update" });
-        }
-
-        params.push(id);
-        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIdx} RETURNING id, name as username, email, role`;
-        const result = await db.query(query, params);
-
-        res.json({ success: true, user: result.rows[0] });
-    } catch (error) {
-        console.error("Update user error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Delete user
-app.delete("/api/users/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Handle foreign key constraints manually for better stability
-        // Nullify requester_id in requests so history is preserved but user can be deleted
-        await db.query('UPDATE requests SET requester_id = NULL WHERE requester_id = $1', [id]);
-
-        // Nullify created_by in stock_history
-        await db.query('UPDATE stock_history SET created_by = NULL WHERE created_by = $1', [id]);
-
-        // Notifications are CASCADE, so they will be deleted automatically
-
-        const result = await db.query('DELETE FROM users WHERE id = $1', [id]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ success: false, message: "User not found" });
-        }
-
-        res.json({ success: true, message: "User deleted successfully" });
-    } catch (error) {
-        console.error("Delete user error:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // Requests API
 app.get("/api/requests", async (req, res) => {
     try {
@@ -531,8 +295,8 @@ app.get("/api/requests", async (req, res) => {
             'quantity', ri.quantity, 
             'name', i.name, 
             'category', i.category,
-            'stock_before', ri.stock_before,
-            'stock_after', ri.stock_after
+            'stock_before', (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = r.id OR sh.notes LIKE '%' || r.id || '%') LIMIT 1),
+            'stock_after', (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = r.id OR sh.notes LIKE '%' || r.id || '%') LIMIT 1)
           ))
           FROM request_items ri
           JOIN items i ON ri."item_id" = i.id
@@ -564,8 +328,8 @@ app.get("/api/requests/user/:userId", async (req, res) => {
             'quantity', ri.quantity, 
             'name', i.name, 
             'category', i.category,
-            'stock_before', ri.stock_before,
-            'stock_after', ri.stock_after
+            'stock_before', (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = r.id OR sh.notes LIKE '%' || r.id || '%') LIMIT 1),
+            'stock_after', (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = r.id OR sh.notes LIKE '%' || r.id || '%') LIMIT 1)
           ))
           FROM request_items ri
           JOIN items i ON ri."item_id" = i.id
@@ -599,7 +363,9 @@ app.get("/api/requests/:id", async (req, res) => {
 
         const request = result.rows[0];
         const itemResult = await db.query(`
-      SELECT ri.*, i.name, i.category
+      SELECT ri.*, i.name, i.category,
+        (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = ri."request_id" OR sh.notes LIKE '%' || ri."request_id" || '%') LIMIT 1) as stock_before,
+        (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri."item_id" AND (sh.reference_id = ri."request_id" OR sh.notes LIKE '%' || ri."request_id" || '%') LIMIT 1) as stock_after
       FROM request_items ri
       JOIN items i ON ri."item_id" = i.id
       WHERE ri."request_id" = $1
@@ -664,33 +430,26 @@ app.post("/api/requests", async (req, res) => {
 app.put("/api/items/:id", async (req, res) => {
     try {
         const { id } = req.params;
-        const { quantity, notes, historyNotes, userId, name, description, category, minQuantity, unit, price } = req.body;
+        const { quantity, notes, userId, ...updates } = req.body;
 
-        const existingResult = await db.query('SELECT quantity FROM items WHERE id = $1', [id]);
-        if (existingResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: "Item not found" });
-        }
+        const existingResult = await db.query("SELECT quantity FROM items WHERE id = $1", [id]);
+        if (existingResult.rows.length === 0) return res.status(404).json({ success: false, message: "Item not found" });
 
         const oldQty = existingResult.rows[0].quantity;
-        const actualNotes = historyNotes || notes || 'Manual update';
 
-        // Filter valid updates and map to quoted names where necessary (for PostgreSQL/Supabase)
-        const updates = {};
-        if (name !== undefined) updates.name = name;
-        if (description !== undefined) updates.description = description;
-        if (category !== undefined) updates.category = category;
-        if (quantity !== undefined) updates.quantity = quantity;
-        if (minQuantity !== undefined) updates['"minQuantity"'] = minQuantity; // Quoted for camelCase in PG
-        if (unit !== undefined) updates.unit = unit;
-        if (price !== undefined) updates.price = price;
-
-        if (Object.keys(updates).length === 0) {
-            return res.json({ success: true, message: "No updates provided" });
+        // Map updates to snake_case if necessary
+        const mappedUpdates = {};
+        if (updates.minQuantity !== undefined) {
+            mappedUpdates.min_quantity = updates.minQuantity;
+            delete updates.minQuantity;
         }
+        // ... add other mappings if needed
+
+        const allUpdates = { ...updates, ...mappedUpdates, quantity };
 
         // Build update query
-        const fields = Object.keys(updates).map((key, index) => `${key} = $${index + 1}`);
-        const values = Object.values(updates);
+        const fields = Object.keys(allUpdates).map((key, index) => `${key} = $${index + 1}`);
+        const values = Object.values(allUpdates);
         values.push(id);
 
         const updateQuery = `UPDATE items SET ${fields.join(", ")} WHERE id = $${values.length} RETURNING *`;
@@ -698,29 +457,17 @@ app.put("/api/items/:id", async (req, res) => {
         const updatedItem = updatedResult.rows[0];
 
         // History logging
-        if (quantity !== undefined && quantity !== oldQty) {
+        if (quantity !== oldQty) {
             await db.query(`
-                INSERT INTO stock_history ("item_id", "change_type", "quantity_before", "quantity_change", "quantity_after", notes, "created_by")
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-            `, [
-                id,
-                quantity > oldQty ? 'restock' : 'adjustment',
-                oldQty || 0,
-                (quantity || 0) - (oldQty || 0),
-                quantity,
-                actualNotes,
-                userId
-            ]);
+        INSERT INTO stock_history (item_id, change_type, quantity_before, quantity_change, quantity_after, notes, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [id, quantity > oldQty ? 'restock' : 'adjustment', oldQty, (quantity || 0) - (oldQty || 0), quantity, notes || 'Manual update', userId]);
         }
 
         res.json(updatedItem);
     } catch (error) {
-        console.error("Update item error detail:", error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            detail: "Error updating item. Ensure all field names match the database schema."
-        });
+        console.error("Update item error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -792,10 +539,10 @@ app.post("/api/items", async (req, res) => {
     try {
         const { name, description, category, quantity, minQuantity, price, unit } = req.body;
         const result = await db.query(
-            'INSERT INTO items (name, description, category, quantity, "minQuantity", price, unit, status, "isActive") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            'INSERT INTO items (name, description, category, quantity, "minQuantity", price, unit, status, "isActive") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
             [name, description, category, quantity || 0, minQuantity || 0, price || 0, unit || 'pcs', 'in-stock', 1]
         );
-        res.status(201).json(result.rows[0]);
+        res.status(201).json({ success: true, id: result.rows[0].id });
     } catch (error) {
         console.error("Create item error:", error);
         res.status(500).json({ success: false, error: error.message });
@@ -907,6 +654,68 @@ app.get("/api/dashboard/activity", async (req, res) => {
     }
 });
 
+app.patch("/api/requests/:id", async (req, res) => {
+    const client = await db.pool.connect();
+    try {
+        const { id } = req.params;
+        const { project_name, reason, priority, due_date, items } = req.body;
+
+        await client.query('BEGIN');
+
+        // Update main request fields
+        const updateFields = [];
+        const updateValues = [];
+        let paramIndex = 1;
+
+        if (project_name) {
+            updateFields.push(`"project_name" = $${paramIndex++}`);
+            updateValues.push(project_name);
+        }
+        if (reason !== undefined) {
+            updateFields.push(`"reason" = $${paramIndex++}`);
+            updateValues.push(reason);
+        }
+        if (priority) {
+            updateFields.push(`"priority" = $${paramIndex++}`);
+            updateValues.push(priority);
+        }
+        if (due_date !== undefined) {
+            updateFields.push(`"due_date" = $${paramIndex++}`);
+            updateValues.push(due_date);
+        }
+
+        if (updateFields.length > 0) {
+            updateValues.push(id);
+            await client.query(
+                `UPDATE requests SET ${updateFields.join(", ")}, "updatedAt" = NOW() WHERE id = $${paramIndex}`,
+                updateValues
+            );
+        }
+
+        // Update item quantities
+        if (items && Array.isArray(items)) {
+            for (const item of items) {
+                const itemId = item.item_id || item.itemId;
+                if (itemId && item.quantity !== undefined) {
+                    await client.query(
+                        'UPDATE request_items SET quantity = $1 WHERE "request_id" = $2 AND "item_id" = $3',
+                        [item.quantity, id, itemId]
+                    );
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, message: "Request updated successfully" });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error("Update request error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    } finally {
+        client.release();
+    }
+});
+
 // Update request status with stock deduction and history
 app.patch("/api/requests/:id/status", async (req, res) => {
     const client = await db.pool.connect();
@@ -944,15 +753,12 @@ app.patch("/api/requests/:id/status", async (req, res) => {
                     // Update item
                     await client.query('UPDATE items SET quantity = $1, status = $2 WHERE id = $3', [newQty, itemStatus, item.item_id]);
 
-                    // Update request_item with stock snapshot
-                    await client.query('UPDATE request_items SET stock_before = $1, stock_after = $2 WHERE request_id = $3 AND item_id = $4', [item.current_qty, newQty, id, item.item_id]);
-
                     // Insert history
                     const note = `Approved request ${id}`;
                     await client.query(`
-                        INSERT INTO stock_history ("item_id", "change_type", "quantity_before", "quantity_change", "quantity_after", notes, "created_by")
-                        VALUES ($1, 'request', $2, $3, $4, $5, $6)
-                    `, [item.item_id, item.current_qty, -item.requested_qty, newQty, note, approved_by || null]);
+                        INSERT INTO stock_history ("item_id", "change_type", "quantity_before", "quantity_change", "quantity_after", "reference_id", notes, "created_by")
+                        VALUES ($1, 'request', $2, $3, $4, $5, $6, $7)
+                    `, [item.item_id, item.current_qty, -item.requested_qty, newQty, id, note, approved_by || null]);
                 }
             }
         }
@@ -1153,41 +959,6 @@ module.exports = app;
 
 // Start the server only if run directly (not as a module)
 if (require.main === module) {
-    // Run auto-migration on startup
-    (async () => {
-        try {
-            // Create categories table
-            await db.query(`
-                CREATE TABLE IF NOT EXISTS categories (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) UNIQUE NOT NULL,
-                    description TEXT,
-                    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
-
-            // Seed from items if empty
-            try {
-                const countRes = await db.query('SELECT COUNT(*) FROM categories');
-                if (parseInt(countRes.rows[0].count) === 0) {
-                    await db.query(`
-                        INSERT INTO categories (name, description)
-                        SELECT DISTINCT category, category || ' items'
-                        FROM items
-                        WHERE category IS NOT NULL AND category != ''
-                        ON CONFLICT (name) DO NOTHING;
-                    `);
-                    console.log("✅ Categories table seeded from existing items.");
-                }
-            } catch (seedErr) {
-                console.error("Seeding error (non-fatal):", seedErr.message);
-            }
-        } catch (err) {
-            console.error("❌ Auto-migration failed:", err.message);
-        }
-    })();
-
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Unified server running on port ${PORT} with Supabase`);
     });

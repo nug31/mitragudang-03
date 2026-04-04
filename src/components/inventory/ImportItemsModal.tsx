@@ -145,6 +145,7 @@ const ImportItemsModal: React.FC<ImportItemsModalProps> = ({
               normalizedRow.minquantity || normalizedRow.min_quantity || "0"
             ) || 0,
           location: normalizedRow.location || "",
+          unit: normalizedRow.unit || "pcs",
           lastRestocked: new Date().toISOString(),
         };
       });

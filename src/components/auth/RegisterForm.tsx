@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import Alert from "../ui/Alert";
-import { UserPlus, Eye, EyeOff } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SuccessOverlay from "./SuccessOverlay";
 
@@ -18,7 +18,6 @@ const RegisterForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [authStatus, setAuthStatus] = useState<'loading' | 'success'>('loading');
-  const [showPassword, setShowPassword] = useState(false);
 
   // 3D Tilt Effect State
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -160,52 +159,24 @@ const RegisterForm: React.FC = () => {
                   <label className="block text-xs font-bold text-gray-300 mb-1.5 ml-1 uppercase tracking-wider">Password</label>
                   <Input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
                     className="bg-black/40 border-white/10 text-white placeholder:text-gray-600 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all rounded-xl h-11 text-sm"
-                    rightElement={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="p-1 hover:bg-white/10 rounded-lg transition-colors focus:outline-none"
-                        title={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    }
                   />
                 </div>
                 <div className="animate-fade-in-up stagger-4">
                   <label className="block text-xs font-bold text-gray-300 mb-1.5 ml-1 uppercase tracking-wider">Confirm</label>
                   <Input
                     id="confirm-password"
-                    type={showPassword ? "text" : "password"}
+                    type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="••••••••"
                     className="bg-black/40 border-white/10 text-white placeholder:text-gray-600 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all rounded-xl h-11 text-sm"
-                    rightElement={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="p-1 hover:bg-white/10 rounded-lg transition-colors focus:outline-none"
-                        title={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    }
                   />
                 </div>
               </div>

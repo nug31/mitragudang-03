@@ -1,7 +1,6 @@
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env.production') });
 const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: '.env.production' });
 
 // PostgreSQL direct connection (for raw SQL)
 const pool = new Pool({

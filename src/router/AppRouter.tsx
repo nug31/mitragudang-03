@@ -80,7 +80,7 @@ const AppRouter: React.FC = () => {
           element={<ProtectedRoute element={<NewRequestPage />} />}
         />
         <Route
-          path="/requests/:name"
+          path="/requests/:id"
           element={<ProtectedRoute element={<RequestDetailPage />} />}
         />
 

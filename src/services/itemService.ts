@@ -140,7 +140,7 @@ class ItemService {
   }
 
   // Update an existing item
-  async updateItem(id: string, updates: Partial<Item> & { historyNotes?: string, userId?: string }): Promise<Item | null> {
+  async updateItem(id: string, updates: Partial<Item>): Promise<Item | null> {
     try {
       const response = await fetch(`${API_URL}/items/${id}`, {
         method: "PUT",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import AppRouter from "./router/AppRouter";
 import Favicon from "./components/ui/Favicon";
@@ -25,16 +25,14 @@ function App() {
 
     const splashShown = sessionStorage.getItem('splashShown');
 
+    // Set document title
+    document.title = APP_NAME;
+
     if (splashShown === 'true') {
       // Skip splash if already shown in this session
       setShowSplash(false);
       setIsReady(true);
     }
-  }, []);
-
-  useEffect(() => {
-    // Dynamically update document title
-    document.title = APP_NAME;
   }, []);
 
   const handleSplashComplete = () => {

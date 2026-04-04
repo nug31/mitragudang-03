@@ -185,61 +185,44 @@ function formatCategoryName(categoryString) {
   return categoryMapping[categoryString] || categoryString;
 }
 
-// Categories API - with robust auto-sync from items
+// Get all categories
 app.get("/api/categories", async (req, res) => {
   try {
-    console.log("GET /api/categories - Fetching and syncing categories");
+    console.log("GET /api/categories - Fetching all categories");
 
-    // 1. Ensure table exists (Quick migration)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) UNIQUE NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-
-    // 2. Sync: Insert categories from items table if they don't exist in categories table
-    await pool.query(`
-      INSERT IGNORE INTO categories (name, description)
-      SELECT DISTINCT category, CONCAT(category, ' items')
-      FROM items
-      WHERE category IS NOT NULL AND category != ''
-    `);
-
-    // 3. Get all categories from categories table
+    // Get all categories from categories table
     const [categories] = await pool.query(`
       SELECT id, name, description, created_at FROM categories
       ORDER BY name
     `);
 
-    console.log(`Found and synced ${categories.length} categories`);
+    console.log(`Found ${categories.length} categories`);
 
-    // 4. Get category usage from items table
+    // Also get category usage from items table
     const [categoryUsage] = await pool.query(`
       SELECT category, COUNT(*) as item_count
       FROM items
       GROUP BY category
+      ORDER BY item_count DESC
     `);
 
     // Format categories with usage information
     const formattedCategories = categories.map(category => {
       const usage = categoryUsage.find(u =>
-        u.category === category.name || formatCategoryName(u.category) === category.name
+        formatCategoryName(u.category).toLowerCase() === category.name.toLowerCase()
       );
 
       return {
-        id: category.id.toString(),
+        id: category.id,
         name: category.name,
         description: category.description || "",
         item_count: usage ? usage.item_count : 0,
-        createdAt: category.created_at
+        created_at: category.created_at
       };
     });
 
-    res.json({ success: true, categories: formattedCategories });
+    console.log("Sending response with formatted categories");
+    res.json(formattedCategories);
   } catch (error) {
     console.error("Error fetching categories:", error);
     res.status(500).json({
@@ -247,76 +230,6 @@ app.get("/api/categories", async (req, res) => {
       message: "Error fetching categories",
       error: error.message,
     });
-  }
-});
-
-// Create Category
-app.post("/api/categories", async (req, res) => {
-  try {
-    const { name, description } = req.body;
-    if (!name) return res.status(400).json({ success: false, message: "Name required" });
-
-    const [result] = await pool.query(
-      'INSERT INTO categories (name, description) VALUES (?, ?)',
-      [name, description]
-    );
-
-    res.status(201).json({
-      success: true,
-      id: result.insertId,
-      name,
-      description
-    });
-  } catch (err) {
-    console.error("Create category error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Update Category
-app.put("/api/categories/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description } = req.body;
-
-    const [result] = await pool.query(
-      'UPDATE categories SET name = ?, description = ? WHERE id = ?',
-      [name, description, id]
-    );
-
-    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Category not found" });
-
-    res.json({ success: true, id, name, description });
-  } catch (err) {
-    console.error("Update category error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Delete Category
-app.delete("/api/categories/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Check if used in items first (optional but good)
-    const [category] = await pool.query('SELECT name FROM categories WHERE id = ?', [id]);
-    if (category.length > 0) {
-      const [items] = await pool.query('SELECT COUNT(*) as count FROM items WHERE category = ?', [category[0].name]);
-      if (items[0].count > 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Tidak dapat menghapus kategori yang masih digunakan oleh barang."
-        });
-      }
-    }
-
-    const [result] = await pool.query('DELETE FROM categories WHERE id = ?', [id]);
-    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Category not found" });
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Delete category error:", err);
-    res.status(500).json({ success: false, error: err.message });
   }
 });
 

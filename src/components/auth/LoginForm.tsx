@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import Alert from "../ui/Alert";
-import { LogIn, Eye, EyeOff } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SuccessOverlay from "./SuccessOverlay";
 
@@ -17,7 +17,6 @@ const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [authStatus, setAuthStatus] = useState<'loading' | 'success'>('loading');
-  const [showPassword, setShowPassword] = useState(false);
 
   // 3D Tilt Effect State
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -95,6 +94,15 @@ const LoginForm: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
           <div className="relative z-10 space-y-8">
+            <div className="text-center space-y-2 animate-fade-in-up stagger-1">
+              <h2 className="text-3xl font-black text-white tracking-tight">
+                Welcome Back
+              </h2>
+              <p className="text-gray-400 font-medium">
+                Enter your credentials to continue
+              </p>
+            </div>
+
             {error && (
               <div className="animate-scale-in">
                 <Alert
@@ -130,26 +138,12 @@ const LoginForm: React.FC = () => {
                 </div>
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
                   className="bg-black/40 border-white/10 text-white placeholder:text-gray-600 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all rounded-xl h-12"
-                  rightElement={
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="p-1 hover:bg-white/10 rounded-lg transition-colors focus:outline-none"
-                      title={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                    </button>
-                  }
                 />
               </div>
 

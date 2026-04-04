@@ -612,7 +612,9 @@ app.get("/api/requests", async (req, res) => {
       requests.map(async (request) => {
         const [items] = await pool.query(
           `
-          SELECT ri.*, i.name, i.description, i.category
+          SELECT ri.*, i.name, i.description, i.category,
+                 (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_before,
+                 (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_after
           FROM request_items ri
           JOIN items i ON ri.item_id = i.id
           WHERE ri.request_id = ?
@@ -659,7 +661,9 @@ app.get("/api/requests/user/:userId", async (req, res) => {
       requests.map(async (request) => {
         const [items] = await pool.query(
           `
-          SELECT ri.*, i.name, i.description, i.category
+          SELECT ri.*, i.name, i.description, i.category,
+                 (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_before,
+                 (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_after
           FROM request_items ri
           JOIN items i ON ri.item_id = i.id
           WHERE ri.request_id = ?
@@ -714,7 +718,9 @@ app.get("/api/requests/:id", async (req, res) => {
     // Get items for the request
     const [items] = await pool.query(
       `
-      SELECT ri.*, i.name, i.description, i.category
+      SELECT ri.*, i.name, i.description, i.category,
+             (SELECT quantity_before FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_before,
+             (SELECT quantity_after FROM stock_history sh WHERE sh.item_id = ri.item_id AND sh.reference_id = ri.request_id LIMIT 1) as stock_after
       FROM request_items ri
       JOIN items i ON ri.item_id = i.id
       WHERE ri.request_id = ?
@@ -1105,6 +1111,73 @@ app.patch("/api/requests/:id/status", async (req, res) => {
       message: "Error updating request status",
       error: error.message,
     });
+  }
+});
+
+app.patch("/api/requests/:id", async (req, res) => {
+  let connection;
+  try {
+    const { id } = req.params;
+    const { project_name, reason, priority, due_date, items } = req.body;
+
+    console.log(`PATCH /api/requests/${id} - Updating request details`);
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update main request fields
+    const updateFields = [];
+    const updateValues = [];
+
+    if (project_name) {
+      updateFields.push("project_name = ?");
+      updateValues.push(project_name);
+    }
+    if (reason !== undefined) {
+      updateFields.push("reason = ?");
+      updateValues.push(reason);
+    }
+    if (priority) {
+      updateFields.push("priority = ?");
+      updateValues.push(priority);
+    }
+    if (due_date !== undefined) {
+      updateFields.push("due_date = ?");
+      updateValues.push(due_date);
+    }
+
+    if (updateFields.length > 0) {
+      updateValues.push(id);
+      await connection.query(
+        `UPDATE requests SET ${updateFields.join(", ")} WHERE id = ?`,
+        updateValues
+      );
+    }
+
+    // Update item quantities if provided
+    if (items && Array.isArray(items)) {
+      for (const item of items) {
+        if (item.item_id && item.quantity !== undefined) {
+          await connection.query(
+            "UPDATE request_items SET quantity = ? WHERE request_id = ? AND item_id = ?",
+            [item.quantity, id, item.item_id]
+          );
+        }
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, message: "Request updated successfully" });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error(`Error updating request ${req.params.id}:`, error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating request",
+      error: error.message,
+    });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

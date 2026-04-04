@@ -21,16 +21,6 @@ class CategoryService {
 
       // Handle the new API response format: { success: true, categories: [...] }
       if (data.success && data.categories) {
-        // If categories are objects (new format)
-        if (data.categories.length > 0 && typeof data.categories[0] === 'object') {
-          return data.categories.map((cat: any) => ({
-            id: cat.id.toString(),
-            name: cat.name,
-            description: cat.description || `${cat.name} items`
-          }));
-        }
-
-        // Fallback for string array (old format)
         return data.categories.map((categoryName: string, index: number) => ({
           id: (index + 1).toString(),
           name: this.formatCategoryName(categoryName),
@@ -40,18 +30,8 @@ class CategoryService {
 
       // Fallback for old format
       return Array.isArray(data) ? data : [];
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching categories:", error);
-      // Attempt to log more details if it's a 500
-      if (error instanceof Error && error.message.includes('500')) {
-        try {
-          const response = await fetch(this.apiUrl);
-          const errorText = await response.text();
-          console.error("Detailed 500 Response:", errorText);
-        } catch (e) {
-          console.error("Could not fetch detailed error:", e);
-        }
-      }
       throw error;
     }
   }
@@ -69,9 +49,9 @@ class CategoryService {
     };
 
     return categoryMapping[categoryString] ||
-      categoryString.split('-').map(word =>
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
+           categoryString.split('-').map(word =>
+             word.charAt(0).toUpperCase() + word.slice(1)
+           ).join(' ');
   }
 
   async getCategoryOptions(): Promise<{ value: string; label: string }[]> {
@@ -87,15 +67,6 @@ class CategoryService {
       // Handle the new API response format and use original database values
       if (data.success && data.categories && Array.isArray(data.categories)) {
         console.log("Processing categories:", data.categories); // Debug log
-
-        // If objects
-        if (data.categories.length > 0 && typeof data.categories[0] === 'object') {
-          return data.categories.map((cat: any) => ({
-            value: cat.name,
-            label: this.formatCategoryName(cat.name)
-          }));
-        }
-
         return data.categories.map((categoryName: string) => ({
           value: categoryName, // Use original database value
           label: this.formatCategoryName(categoryName), // Use formatted display name
@@ -183,16 +154,7 @@ class CategoryService {
       });
 
       if (!response.ok) {
-        let errorMessage = `Failed to delete category: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          if (errorData && errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (e) {
-          // Fallback if not JSON
-        }
-        throw new Error(errorMessage);
+        throw new Error(`Failed to delete category: ${response.statusText}`);
       }
     } catch (error) {
       console.error(`Error deleting category with id ${id}:`, error);

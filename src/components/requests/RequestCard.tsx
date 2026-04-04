@@ -33,6 +33,10 @@ const RequestCard: React.FC<RequestCardProps> = ({
     createdAt,
   } = request;
 
+  const requesterName = (request as any).requester_name ||
+    (request as any).requesterName ||
+    null;
+
   const getStatusVariant = (status: RequestStatus) => {
     switch (status) {
       case "approved":
@@ -115,7 +119,12 @@ const RequestCard: React.FC<RequestCardProps> = ({
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Badge>
             </div>
-            <div className="flex items-center mt-2 text-sm text-gray-600">
+            {requesterName && (
+              <div className="flex items-center mt-1 text-sm text-blue-600 font-medium">
+                <span>👤 {requesterName}</span>
+              </div>
+            )}
+            <div className="flex items-center mt-1 text-sm text-gray-600">
               <Clock className="h-4 w-4 mr-1" />
               <span>Created: {formatDateWithTime(createdAt)}</span>
               <Calendar className="h-4 w-4 ml-4 mr-1" />
@@ -184,7 +193,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
                 variant="outline"
                 size="sm"
                 icon={<ExternalLink className="h-4 w-4" />}
-                to={`/requests/${encodeURIComponent(itemName)}`}
+                to={`/requests/${id}`}
                 as={Link}
               >
                 View Details

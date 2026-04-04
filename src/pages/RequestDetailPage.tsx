@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 const RequestDetailPage: React.FC = () => {
-  const { name } = useParams<{ name: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { /* isAuthenticated, */ isAdmin } = useAuth();
   const [request, setRequest] = useState<ItemRequest | null>(null);
@@ -35,10 +35,15 @@ const RequestDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItems, setEditedItems] = useState<any[]>([]);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editedRequesterName, setEditedRequesterName] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
 
   useEffect(() => {
-    if (!name) {
-      setError("Request name is missing");
+    if (!id) {
+      setError("Request ID is missing");
       setLoading(false);
       return;
     }
@@ -46,84 +51,42 @@ const RequestDetailPage: React.FC = () => {
     const fetchRequestDetails = async () => {
       setLoading(true);
       try {
-        // Decode the URL-encoded name
-        const decodedName = decodeURIComponent(name);
-        console.log("Fetching request details for:", decodedName);
+        // Decode the URL-encoded ID
+        const decodedId = decodeURIComponent(id);
+        console.log("Fetching request details for ID:", decodedId);
 
-        // Try multiple approaches to find the request
         let requestData;
 
-        // First, try to get the request directly by ID (in case the name is actually an ID)
+        // Primary approach: Get by ID
         try {
-          console.log("Trying to fetch request by ID:", decodedName);
-          requestData = await requestService.getRequestById(decodedName);
+          requestData = await requestService.getRequestById(decodedId);
           console.log("Successfully fetched request by ID:", requestData);
         } catch (idError) {
-          console.log("Failed to fetch request by ID:", idError);
+          console.log("Failed to fetch request by ID, trying as name:", idError);
 
-          // If that fails, try to find by name
+          // Secondary approach: Try as name (backward compatibility)
           try {
-            console.log("Trying to fetch request by name:", decodedName);
-            requestData = await requestService.getRequestByName(decodedName);
+            requestData = await requestService.getRequestByName(decodedId);
             console.log("Successfully fetched request by name:", requestData);
           } catch (nameError) {
-            console.log("Failed to fetch request by name:", nameError);
-
-            // If both approaches fail, try one more approach - get all requests and filter
-            console.log("Trying to find request in all requests");
-            const allRequests = await requestService.getAllRequests();
-            console.log("All available requests:", allRequests);
-
-            // First try direct match
-            const directMatch = allRequests.find(
-              (req) => req.itemName.toLowerCase() === decodedName.toLowerCase()
-            );
-
-            // Then try partial match
-            const partialMatch = allRequests.find((req) =>
-              req.itemName.toLowerCase().includes(decodedName.toLowerCase())
-            );
-
-            // Then try ID match again
-            const idMatch = allRequests.find((req) => req.id === decodedName);
-
-            console.log("Direct match:", directMatch);
-            console.log("Partial match:", partialMatch);
-            console.log("ID match:", idMatch);
-
-            // Use the first match found
-            requestData = directMatch || partialMatch || idMatch;
-
-            if (!requestData) {
-              console.error("No matching request found for:", decodedName);
-              throw new Error("Request not found");
-            }
+            console.error("Failed to find request by ID or Name:", nameError);
+            throw new Error("Request not found");
           }
         }
 
-        console.log("Found matching request:", requestData);
-
-        // Make sure requestData is not undefined before setting it
         if (requestData) {
           setRequest(requestData);
 
-          // Fetch the requester information from the database
+          // Fetch the requester information
           try {
-            console.log(
-              "Fetching user information for ID:",
-              requestData.userId
-            );
             const userData = await userService.getUserById(requestData.userId);
-            console.log("User data from database:", userData);
             if (userData) {
               setRequester(userData);
             }
           } catch (userErr) {
             console.error("Error fetching requester details:", userErr);
-            // Don't set an error for this, as it's not critical
           }
         } else {
-          console.error("Request data is undefined");
           throw new Error("Request not found");
         }
       } catch (err) {
@@ -135,13 +98,16 @@ const RequestDetailPage: React.FC = () => {
     };
 
     fetchRequestDetails();
-  }, [name]);
+  }, [id]);
 
   const handleStatusChange = async (status: RequestStatus) => {
     if (!request) return;
 
     setActionLoading(true);
     try {
+      // In the new structure, we use fulfilled for stock deduction in index.js, 
+      // and approved in railway-server.cjs. 
+      // For consistency with RequestService, we use the method that handles status.
       const updatedRequest = await requestService.updateRequestStatus(
         request.id,
         status
@@ -154,6 +120,76 @@ const RequestDetailPage: React.FC = () => {
     } catch (err) {
       console.error("Error updating request status:", err);
       setError("Failed to update request status");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSaveItems = async () => {
+    if (!request) return;
+    
+    setActionLoading(true);
+    try {
+      console.log("Saving adjusted items:", editedItems);
+      
+      const updatedRequest = await requestService.updateRequest(request.id, {
+        items: editedItems.map(item => ({
+          item_id: item.item_id || item.itemId,
+          quantity: item.quantity
+        }))
+      });
+      
+      if (updatedRequest) {
+        setRequest(updatedRequest);
+        setIsEditing(false);
+        // Refresh local data
+        window.location.reload(); 
+      }
+    } catch (err) {
+      console.error("Error updating request items:", err);
+      setError("Failed to save changes: " + (err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuantityChange = (index: number, newQty: number) => {
+    const newItems = [...editedItems];
+    newItems[index] = { ...newItems[index], quantity: newQty };
+    setEditedItems(newItems);
+  };
+
+  const startEditing = () => {
+    if (request && request.items) {
+      setEditedItems([...request.items]);
+      setIsEditing(true);
+    }
+  };
+
+  const startEditingDetails = () => {
+    if (request) {
+      const currentName = (request as any).requester_name ||
+        (request as any).requesterName ||
+        requester?.username || "";
+      const currentDesc = (request as any).reason || request.description || "";
+      setEditedRequesterName(currentName);
+      setEditedDescription(currentDesc);
+      setIsEditingDetails(true);
+    }
+  };
+
+  const handleSaveDetails = async () => {
+    if (!request) return;
+    setActionLoading(true);
+    try {
+      await requestService.updateRequest(request.id, {
+        reason: editedDescription,
+      } as any);
+      // update local state
+      setRequest({ ...request, reason: editedDescription, description: editedDescription } as any);
+      setIsEditingDetails(false);
+    } catch (err) {
+      setError("Failed to save details: " + (err as Error).message);
     } finally {
       setActionLoading(false);
     }
@@ -308,7 +344,7 @@ const RequestDetailPage: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Items Requested</p>
                         <div className="space-y-2">
-                          {request.items.map((item: any, index: number) => (
+                          {(isEditing ? editedItems : request.items).map((item: any, index: number) => (
                             <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                               <div>
                                 <p className="font-medium">{item.name}</p>
@@ -316,7 +352,20 @@ const RequestDetailPage: React.FC = () => {
                                 <p className="text-xs text-gray-500">Category: {item.category}</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-medium">Qty: {item.quantity}</p>
+                                {isEditing ? (
+                                  <div className="flex items-center">
+                                    <span className="mr-2 text-sm">Qty:</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      className="w-20 p-1 border border-gray-300 rounded text-right"
+                                      value={item.quantity}
+                                      onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
+                                    />
+                                  </div>
+                                ) : (
+                                  <p className="font-medium">Qty: {item.quantity}</p>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -346,28 +395,69 @@ const RequestDetailPage: React.FC = () => {
                       </Badge>
                     </div>
 
-                    {(request.reason || request.description) && (
-                      <div>
+                    {/* Description - editable by admin */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
                         <p className="text-sm text-gray-500">Description</p>
-                        <p className="font-medium">{request.reason || request.description}</p>
+                        {isAdmin && !isEditingDetails && (
+                          <button
+                            onClick={startEditingDetails}
+                            className="text-xs text-blue-500 hover:text-blue-700 underline"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
-                    )}
+                      {isEditingDetails ? (
+                        <>
+                          <textarea
+                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                            rows={3}
+                            value={editedDescription}
+                            onChange={(e) => setEditedDescription(e.target.value)}
+                            placeholder="Enter description..."
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => setIsEditingDetails(false)}
+                              className="text-xs px-3 py-1 border border-gray-300 rounded hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleSaveDetails}
+                              disabled={actionLoading}
+                              className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {actionLoading ? "Saving..." : "Save"}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="font-medium">
+                          {(request as any).reason || request.description || <span className="text-gray-400 italic">No description</span>}
+                        </p>
+                      )}
+                    </div>
 
                     <div className="pt-2 border-t border-gray-100">
-                      <p className="text-sm text-gray-500 mb-2">Requested By</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-500">Requested By</p>
+                      </div>
                       <div className="flex items-center">
                         <User className="h-5 w-5 text-blue-600 mr-2" />
                         <div>
                           <p className="font-medium">
-                            {requester?.username ||
-                              request.requesterName ||
+                            {(request as any).requester_name ||
+                              requester?.username ||
+                              (request as any).requesterName ||
                               "Unknown User"}
                           </p>
                           <div className="flex items-center text-sm text-gray-600">
                             <Mail className="h-3 w-3 mr-1" />
                             <span>
                               {requester?.email ||
-                                request.requesterEmail ||
+                                (request as any).requesterEmail ||
                                 "No email available"}
                             </span>
                           </div>
@@ -424,23 +514,53 @@ const RequestDetailPage: React.FC = () => {
 
             {isAdmin && request.status === "pending" && (
               <CardFooter className="bg-gray-50 border-t border-gray-200 p-4">
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant="danger"
-                    onClick={() => handleStatusChange("rejected")}
-                    disabled={actionLoading}
-                    icon={<XCircle className="h-4 w-4 mr-1" />}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    variant="success"
-                    onClick={() => handleStatusChange("approved")}
-                    disabled={actionLoading}
-                    icon={<CheckCircle className="h-4 w-4 mr-1" />}
-                  >
-                    Approve
-                  </Button>
+                <div className="flex justify-end gap-3 flex-wrap">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
+                        disabled={actionLoading}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveItems}
+                        isLoading={actionLoading}
+                        disabled={actionLoading}
+                        icon={<CheckCircle className="h-4 w-4 mr-1" />}
+                      >
+                        Save Quantities
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={startEditing}
+                        disabled={actionLoading}
+                      >
+                        Edit Request
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleStatusChange("rejected")}
+                        disabled={actionLoading}
+                        icon={<XCircle className="h-4 w-4 mr-1" />}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        variant="success"
+                        onClick={() => handleStatusChange("approved")}
+                        disabled={actionLoading}
+                        icon={<CheckCircle className="h-4 w-4 mr-1" />}
+                      >
+                        Approve
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardFooter>
             )}

@@ -242,15 +242,19 @@ const RequestForm: React.FC<RequestFormProps> = ({
               />
             </div>
 
-            <Input
-              id="delivery-date"
-              label="Requested Delivery Date"
-              type="date"
-              value={deliveryDate}
-              onChange={(e) => setDeliveryDate(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
-              required
-            />
+            <div className="mb-4">
+              <label htmlFor="delivery-date" className="block text-sm font-medium text-gray-700 mb-1">
+                Requested Delivery Date <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                id="delivery-date"
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white/90 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              />
+            </div>
 
             <Textarea
               id="description"

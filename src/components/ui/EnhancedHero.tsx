@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Package, Users, TrendingUp, Shield, Zap, Globe } from "lucide-react";
 import Button from "./Button";
 import { Card, CardContent } from "./Card";
-import { APP_NAME } from "../../config";
 
 const EnhancedHero: React.FC = () => {
   const features = [
@@ -64,7 +63,7 @@ const EnhancedHero: React.FC = () => {
           <div className="mb-8">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
               <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-                {APP_NAME}
+                Gudang Mitra
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">

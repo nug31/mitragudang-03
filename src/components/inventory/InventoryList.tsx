@@ -11,18 +11,16 @@ interface InventoryListProps {
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
   onEdit: (item: Item) => void;
-
   isLoading?: boolean;
 }
 
-const InventoryList: React.FC<InventoryListProps> = ({
+const InventoryList = ({
   items,
   onUpdate,
   onDelete,
   onEdit,
-
   isLoading = false,
-}) => {
+}: InventoryListProps) => {
   const getStatusBadge = (status: Item["status"]) => {
     switch (status) {
       case "in-stock":
@@ -102,7 +100,6 @@ const InventoryList: React.FC<InventoryListProps> = ({
                 >
                   Edit
                 </Button>
-
                 <Button
                   variant="danger"
                   size="sm"
@@ -141,7 +138,7 @@ const InventoryList: React.FC<InventoryListProps> = ({
                   <Input
                     type="number"
                     value={item.quantity}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       handleQuantityChange(
                         item.id,
                         parseInt(e.target.value) || 0
@@ -190,7 +187,7 @@ const InventoryList: React.FC<InventoryListProps> = ({
                   <Input
                     type="number"
                     value={item.minQuantity}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       handleMinQuantityChange(
                         item.id,
                         parseInt(e.target.value) || 0

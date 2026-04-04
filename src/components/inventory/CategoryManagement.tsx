@@ -70,9 +70,9 @@ export function CategoryManagement({
       await categoryService.deleteCategory(categoryToDelete.id);
       setSuccess("Category deleted successfully");
       fetchCategories();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting category:", error);
-      setError(error.message || "Failed to delete category");
+      setError("Failed to delete category");
     } finally {
       setIsDeleteDialogOpen(false);
       setCategoryToDelete(null);

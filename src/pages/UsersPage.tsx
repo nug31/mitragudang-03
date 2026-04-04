@@ -64,19 +64,46 @@ const UsersPage: React.FC = () => {
   const handleSaveUser = async (userData: any) => {
     try {
       if (editingUser) {
-        // Update existing user via service
-        const updatedUser = await userService.updateUser(editingUser.id, userData);
+        // Update existing user
+        const response = await fetch(
+          `${API_BASE_URL}/users/${editingUser.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(userData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to update user");
+        }
+
+        const data = await response.json();
 
         // Update user in state
         setUsers(
-          users.map((user) => (user.id === editingUser.id ? updatedUser : user))
+          users.map((user) => (user.id === editingUser.id ? data.user : user))
         );
       } else {
-        // Create new user via service
-        const newUser = await userService.createUser(userData);
+        // Create new user
+        const response = await fetch(`${API_BASE_URL}/users`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create user");
+        }
+
+        const data = await response.json();
 
         // Add new user to state
-        setUsers([...users, newUser]);
+        setUsers([...users, data.user]);
       }
 
       // Close modal
@@ -114,12 +141,12 @@ const UsersPage: React.FC = () => {
 
   const filteredUsers = users.filter((user) => {
     if (roleFilter !== "all" && user.role !== roleFilter) return false;
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      const nameMatch = user.username?.toLowerCase()?.includes(lowerSearch);
-      const emailMatch = user.email?.toLowerCase()?.includes(lowerSearch);
-      if (!nameMatch && !emailMatch) return false;
-    }
+    if (
+      searchTerm &&
+      !user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -236,7 +263,7 @@ const UsersPage: React.FC = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.username}
+                          {user.name}
                         </div>
                         <div className="text-sm text-gray-500">
                           {user.email}
@@ -246,12 +273,13 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        ${user.role === "admin"
+                        ${
+                          user.role === "admin"
                             ? "bg-purple-100 text-purple-800"
                             : user.role === "manager"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
                       >
                         {user.role}
                       </span>

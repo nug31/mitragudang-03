@@ -3,7 +3,6 @@ const cors = require("cors");
 const mysql = require("./pg-shim");
 // Load environment variables
 require('dotenv').config({ path: '.env.production' });
-// OpenAI removed - using mock data only
 
 // Database configuration directly from environment variables
 const dbConfig = {
@@ -30,26 +29,65 @@ console.log('DB_HOST:', process.env.DB_HOST);
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Middleware
+// Define allowed origins
+const allowedOrigins = [
+  'https://gudang.netlify.app',
+  'https://gudang-mitra-app.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
+// Add CORS_ORIGIN if it exists and isn't already included
+if (process.env.CORS_ORIGIN && !allowedOrigins.includes(process.env.CORS_ORIGIN)) {
+  allowedOrigins.push(process.env.CORS_ORIGIN);
+}
+
+console.log('\n=== CORS Configuration ===');
+console.log('Allowed origins:');
+allowedOrigins.forEach(origin => console.log(`- ${origin}`));
+console.log('CORS_ORIGIN from env:', process.env.CORS_ORIGIN);
+console.log('========================\n');
+
+// CORS middleware configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://gudang-mitra-app.netlify.app',
-    process.env.CORS_ORIGIN
-  ].filter(Boolean),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true
+  origin: function (origin, callback) {
+    console.log('\n=== CORS Check ===');
+    console.log('Request origin:', origin || 'No origin');
+
+    // Allow requests with no origin
+    if (!origin) {
+      console.log('No origin - request allowed');
+      console.log('=================\n');
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      console.log('Origin allowed');
+      console.log('=================\n');
+      callback(null, true);
+    } else {
+      console.log('Origin rejected');
+      console.log('=================\n');
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
 
-app.use(express.json());
-
-// Log all requests
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('\n=== Incoming Request ===');
+  console.log('Time:', new Date().toISOString());
+  console.log('Method:', req.method);
+  console.log('Path:', req.url);
+  console.log('Origin:', req.headers.origin || 'No origin');
+  console.log('======================\n');
   next();
 });
 
+// Parse JSON bodies
+app.use(express.json());
 // Create database pool
 let pool;
 try {
@@ -1539,6 +1577,74 @@ app.delete("/api/requests/:id", async (req, res) => {
     if (connection) {
       connection.release();
     }
+  }
+});
+
+// Update a request
+app.patch("/api/requests/:id", async (req, res) => {
+  let connection;
+  try {
+    const { id } = req.params;
+    const { project_name, reason, priority, due_date, items } = req.body;
+
+    console.log(`PATCH /api/requests/${id} - Updating request details`);
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Update main request fields
+    const updateFields = [];
+    const updateValues = [];
+
+    if (project_name) {
+      updateFields.push("project_name = ?");
+      updateValues.push(project_name);
+    }
+    if (reason !== undefined) {
+      updateFields.push("reason = ?");
+      updateValues.push(reason);
+    }
+    if (priority) {
+      updateFields.push("priority = ?");
+      updateValues.push(priority);
+    }
+    if (due_date !== undefined) {
+      updateFields.push("due_date = ?");
+      updateValues.push(due_date);
+    }
+
+    if (updateFields.length > 0) {
+      updateValues.push(id);
+      await connection.query(
+        `UPDATE requests SET ${updateFields.join(", ")}, updated_at = NOW() WHERE id = ?`,
+        updateValues
+      );
+    }
+
+    // Update item quantities if provided
+    if (items && Array.isArray(items)) {
+      for (const item of items) {
+        if (item.item_id && item.quantity !== undefined) {
+          await connection.query(
+            "UPDATE request_items SET quantity = ? WHERE request_id = ? AND item_id = ?",
+            [item.quantity, id, item.item_id]
+          );
+        }
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, message: "Request updated successfully" });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error(`Error updating request ${req.params.id}:`, error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating request",
+      error: error.message,
+    });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

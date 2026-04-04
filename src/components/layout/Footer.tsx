@@ -2,7 +2,6 @@ import React from "react";
 import Logo from "../ui/Logo";
 import { Link } from "react-router-dom";
 import { Instagram, Linkedin, Github, Globe } from "lucide-react";
-import { APP_NAME } from "../../config";
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -16,7 +15,7 @@ const Footer: React.FC = () => {
           <div className="flex items-center justify-center w-full md:w-auto mb-6 md:mb-0">
             <Logo size={24} className="rounded-full" />
             <span className="ml-2 text-lg font-bold text-gray-800">
-              {APP_NAME}
+              Gudang Mitra
             </span>
           </div>
 
@@ -95,7 +94,7 @@ const Footer: React.FC = () => {
         {/* Copyright and Developer Info */}
         <div className="border-t border-gray-200 pt-4 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
           <p className="text-sm text-gray-500 mb-2 md:mb-0">
-            &copy; {currentYear} {APP_NAME}.
+            &copy; {currentYear} Gudang Mitra.
           </p>
           <p className="text-sm text-gray-500">
             Developed by{" "}

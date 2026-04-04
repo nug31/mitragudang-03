@@ -75,7 +75,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ onClose, onAdd }) => {
           <Input
             label="Item Name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
             required
           />
 
@@ -107,8 +107,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ onClose, onAdd }) => {
               type="number"
               min="0"
               value={formData.quantity.toString()}
-              onChange={(e) =>
-                setFormData({ ...formData, quantity: parseInt(e.target.value) })
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
               }
               required
             />
@@ -128,10 +128,10 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ onClose, onAdd }) => {
               type="number"
               min="0"
               value={formData.minQuantity.toString()}
-              onChange={(e) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFormData({
                   ...formData,
-                  minQuantity: parseInt(e.target.value),
+                  minQuantity: parseInt(e.target.value) || 0,
                 })
               }
               required
