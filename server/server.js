@@ -283,8 +283,8 @@ app.post("/api/users", async (req, res) => {
 // Requests API
 app.get("/api/requests", async (req, res) => {
     try {
-        // Fetch last 200 requests to avoid timeout with large datasets
-        const result = await db.query(`
+        const { month, year, limit = 2000 } = req.query;
+        let query = `
       SELECT 
         r.*, 
         u.name as requester_name, 
@@ -304,9 +304,22 @@ app.get("/api/requests", async (req, res) => {
         ) as items
       FROM requests r
       LEFT JOIN users u ON r."requester_id" = u.id
-      ORDER BY r."createdAt" DESC
-      LIMIT 200
-    `);
+      WHERE 1=1
+    `;
+        const params = [];
+        let paramIndex = 1;
+
+        if (month && year) {
+            query += ` AND EXTRACT(MONTH FROM r."createdAt") = $${paramIndex++}`;
+            params.push(parseInt(month));
+            query += ` AND EXTRACT(YEAR FROM r."createdAt") = $${paramIndex++}`;
+            params.push(parseInt(year));
+        }
+
+        query += ` ORDER BY r."createdAt" DESC LIMIT $${paramIndex}`;
+        params.push(parseInt(limit) || 2000);
+
+        const result = await db.query(query, params);
         res.json(result.rows);
     } catch (error) {
         console.error("Requests fetch error:", error);
